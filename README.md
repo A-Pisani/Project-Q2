@@ -26,6 +26,8 @@ Usually, a small number of labels is sufficient to drastically reduce the number
  
 Further details on the overall method are given in the referenced paper. 
 
+![Screenshot](./img/screenshot.JPG)
+
 ## Target of the Project 
 The target of this work is to write a concurrent application able to: 
 - Receive three parameters on the command line `file1  n  file2` 
