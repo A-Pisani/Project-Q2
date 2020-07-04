@@ -26,7 +26,7 @@ Usually, a small number of labels is sufficient to drastically reduce the number
  
 Further details on the overall method are given in the referenced paper. 
 
-![Screenshot](./img/screenshot.JPG)
+![Screenshot](./img/snapshot.JPG)
 
 ## Target of the Project 
 The target of this work is to write a concurrent application able to: 
