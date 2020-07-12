@@ -31,26 +31,39 @@ struct vertex_s{
     vertex_t *next;
 };
 
+//LOAD GRAPH
 static vertex_t *new_node(vertex_t *g, int id);
 graph_t *graph_load(char *filename);
 static void new_edge( graph_t *g, int i, int j);
 void graph_attribute_init(graph_t *g);
 vertex_t *graph_find(graph_t *g, int id);
 void graph_dispose(graph_t*g);
+// LOAD QUERIES
+int **queries_load(char *filename, int *size);
 //DFS VISIT prototypes
 void graph_dfs(graph_t *g, vertex_t *n);
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime);
 
 int main(int argc, char **argv){
-    int i=0;
+    int i=0, queryNum=0;
     vertex_t *src;
+
+    /*Add check on ARGC == 4*/
+
     printf("loading graph\n");
     graph_t *g = graph_load(argv[1]);
-    printf("Initial vertex? ");
+    printf("loading queries\n");
+    int **mat = queries_load(argv[3], &queryNum);
+    for(i=0; i<queryNum;i++){
+        printf("%d %d\n", mat[i][0], mat[i][1]);
+    }
+    printf("(DFS) Initial vertex? ");
     scanf("%d", &i);
     src= graph_find(g, i);
     graph_attribute_init(g);
+
     graph_dfs(g, src);
+
     graph_dispose(g);
 
 }
@@ -209,7 +222,29 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime) {
     return currTime;
 }
 
+int **queries_load(char *filename, int *size){
+    int **mat;
+    int num=0, tmp1, tmp2;
+    FILE *fp2;
+    //mat = (int**) calloc(1, sizeof(int*));
+    fp2 = fopen(filename, "r");
 
+    while(fscanf(fp2, "%d %d", &tmp1, &tmp2)!=EOF){
+        num++;
+    }
+    mat = (int**) malloc(num*sizeof(int*));
+
+    rewind(fp2);
+    for(int i=0; i<num;i++){
+        mat[i]=(int*) malloc(2*sizeof(int));
+        fscanf(fp2, "%d %d", &mat[i][0], &mat[i][1]);
+    }
+
+    *size=num;
+    fclose(fp2);
+
+    return mat;
+}
 
 
 
