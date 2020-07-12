@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 
 #define MAX_LINE 100
 enum{WHITE, GREY, BLACK};
@@ -43,6 +44,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime);
 int main(int argc, char **argv){
     int i=0;
     vertex_t *src;
+    printf("loading graph\n");
     graph_t *g = graph_load(argv[1]);
     printf("Initial vertex? ");
     scanf("%d", &i);
@@ -55,12 +57,13 @@ int main(int argc, char **argv){
 
 graph_t *graph_load(char *filename) {
     graph_t *g;
-    int i, j, weight, dir;
+    int i, j, k, weight, dir;
     FILE *fp;
     char character;
     g = (graph_t*) calloc(1, sizeof(graph_t));
     fp = fopen(filename, "r");
     fscanf(fp, "%d", &g->nv);
+    printf("Graph number of vertices: %d\n", g->nv);
     /* create initial structure for vertices */
     for (i=g->nv-1; i>=0; i--) {        /*Creates main list of vertices*/
         g->g = new_node(g->g, i);
@@ -68,12 +71,13 @@ graph_t *graph_load(char *filename) {
 
     /* load edges*/
     for (i=g->nv-1; i>=0; i--) {
-        fscanf(fp, "%d: ", &i);
+        fscanf(fp, "%d: ", &k);
+        //printf("%d\n", i);
         do{
             fscanf(fp, "%c ", &character);
             j = atoi(&character);
             if(character!='#')
-                new_edge(g, i, j);
+                new_edge(g, k, j);
         }while(character!='#');
     }
 
@@ -103,6 +107,9 @@ static void new_edge( graph_t *g, int i, int j) { /*Add a new edge node into sec
     e = (edge_t*) malloc(sizeof(edge_t));
     e->dst= dst;
     e->next= src->head; src->head = e;
+
+    //DEBUG comment to not show
+    printf("created edge %d -> %d\n", i, j);
 
     return;
 }
