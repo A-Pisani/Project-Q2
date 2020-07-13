@@ -40,6 +40,7 @@ vertex_t *graph_find(graph_t *g, int id);
 void graph_dispose(graph_t*g);
 // LOAD QUERIES
 int **queries_load(char *filename, int *size);
+void queriesDispose(int **mat, int size);
 //DFS VISIT prototypes
 void graph_dfs(graph_t *g, vertex_t *n);
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime);
@@ -48,11 +49,19 @@ int main(int argc, char **argv){
     int i=0, queryNum=0;
     vertex_t *src;
 
-    /*Add check on ARGC == 4*/
+    if(argc!=4){
+        fprintf (stderr, "Run as: %s p1 p2 p3\n", argv[0]);
+        fprintf (stderr, "Where : p1 = graph file name (.gra)\n");
+        fprintf (stderr, "        p2 = number of label pairs for each graph vertex\n");
+        fprintf (stderr, "        p3 = query file name (.que)\n" );
+        exit (1);
+    }
 
     printf("loading graph\n");
     graph_t *g = graph_load(argv[1]);
-    printf("loading queries\n");
+
+    int labelNum= atoi(argv[2]);
+    printf("loading queries\nQueries are:\n");
     int **mat = queries_load(argv[3], &queryNum);
     for(i=0; i<queryNum;i++){
         printf("%d %d\n", mat[i][0], mat[i][1]);
@@ -65,6 +74,7 @@ int main(int argc, char **argv){
     graph_dfs(g, src);
 
     graph_dispose(g);
+    queriesDispose(mat, queryNum);
 
 }
 
@@ -244,6 +254,13 @@ int **queries_load(char *filename, int *size){
     fclose(fp2);
 
     return mat;
+}
+
+void queriesDispose(int **mat, int size){
+    for(int i=0;i<size;i++){
+        free(mat[i]);
+    }
+    free(mat);
 }
 
 
