@@ -29,7 +29,12 @@ struct vertex_s{
     vertex_t *pred;
     edge_t *head;
     vertex_t *next;
+    // Labels
+    int left_label;
+    int right_label;
 };
+
+int post_order_index=1;
 
 //LOAD GRAPH
 static vertex_t *new_node(vertex_t *g, int id);
@@ -194,12 +199,13 @@ void graph_dfs(graph_t *g, vertex_t *n) {
     printf("List of vertices:\n");
     for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
         tmp2 = tmp->pred;
-        printf("%2d: %2d/%2d (%d)\n", tmp->id, tmp->disc_time, tmp->endp_time, (tmp2!=NULL) ? tmp->pred->id : -1);
+        printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time, (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label, tmp->right_label);
     }
 
 }
 
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime) {
+    vertex_t *tmp;
     edge_t *e;
     vertex_t *t;
     n->color = GREY;
@@ -229,6 +235,31 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime) {
     }
     n->color = BLACK;
     n->endp_time = ++currTime;
+    n->right_label= post_order_index++;
+    n->left_label=50;
+//    if(n->next==NULL)
+//        n->left_label = n->right_label;
+//    else{
+//        for (tmp=n->next; tmp!=NULL; tmp=tmp->next) {
+//            if(tmp->left_label<n->left_label)
+//                n->left_label=tmp->left_label;
+//        }
+//    }
+
+
+            //currTime = graph_dfs_r(g, t, currTime);
+
+    if(n->head==NULL)
+        n->left_label=n->right_label;
+    else{
+        for(e=n->head; e!=NULL; e=e->next){
+            t = e->dst;
+                if(t->left_label<n->left_label)
+                    n->left_label=t->left_label;
+        } 
+    }
+
+
     return currTime;
 }
 
