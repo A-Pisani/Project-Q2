@@ -29,16 +29,20 @@ struct vertex_s{
     vertex_t *pred;
     edge_t *head;
     vertex_t *next;
-    // Labels
-    int left_label;
-    int right_label;
+    // Labels   MUST BECOME AN ARRAY
+//    int left_label;
+//    int right_label;
+    int *left_label;
+    int *right_label;
 };
 
-int post_order_index=1;
+//int post_order_index=1;
+int *post_order_index;
+
 
 //LOAD GRAPH
-static vertex_t *new_node(vertex_t *g, int id);
-graph_t *graph_load(char *filename);
+static vertex_t *new_node(vertex_t *g, int id, int labelNum);
+graph_t *graph_load(char *filename, int labelNum);
 static void new_edge( graph_t *g, int i, int j);
 void graph_attribute_init(graph_t *g);
 vertex_t *graph_find(graph_t *g, int id);
@@ -47,8 +51,8 @@ void graph_dispose(graph_t*g);
 int **queries_load(char *filename, int *size);
 void queriesDispose(int **mat, int size);
 //DFS VISIT prototypes
-void graph_dfs(graph_t *g, vertex_t *n);
-int graph_dfs_r(graph_t *g, vertex_t *n, int currTime);
+void graph_dfs(graph_t *g, vertex_t *n, int index);
+int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index);
 
 int main(int argc, char **argv){
     int i=0, queryNum=0;
@@ -61,29 +65,44 @@ int main(int argc, char **argv){
         fprintf (stderr, "        p3 = query file name (.que)\n" );
         exit (1);
     }
+    int labelNum= atoi(argv[2]);
 
     printf("loading graph\n");
-    graph_t *g = graph_load(argv[1]);
+    graph_t *g = graph_load(argv[1], labelNum);
 
-    int labelNum= atoi(argv[2]);
+
+    /*ADDED */
+    post_order_index=(int*)calloc(labelNum, sizeof(int));
+    if(post_order_index==NULL){
+        fprintf(stderr, "Error in array of indeces allocation\n");
+        exit(1);
+    }
+    /*ADDED */
+
     printf("loading queries\nQueries are:\n");
     int **mat = queries_load(argv[3], &queryNum);
     for(i=0; i<queryNum;i++){
         printf("%d %d\n", mat[i][0], mat[i][1]);
     }
-    printf("(DFS) Initial vertex? ");
-    scanf("%d", &i);
-    src= graph_find(g, i);
-    graph_attribute_init(g);
 
-    graph_dfs(g, src);
+    for(i=0;i<labelNum;i++){
+        printf("(DFS) Initial vertex? ");
+        scanf("%d", &i);
+        src= graph_find(g, i);
+        graph_attribute_init(g);
+
+        graph_dfs(g, src, i);
+    }
+
+    printf("FS ENE\n");
 
     graph_dispose(g);
+    free(post_order_index);
     queriesDispose(mat, queryNum);
 
 }
 
-graph_t *graph_load(char *filename) {
+graph_t *graph_load(char *filename, int labelNum) {
     graph_t *g;
     int i, j, k, weight, dir;
     FILE *fp;
@@ -94,7 +113,7 @@ graph_t *graph_load(char *filename) {
     printf("Graph number of vertices: %d\n", g->nv);
     /* create initial structure for vertices */
     for (i=g->nv-1; i>=0; i--) {        /*Creates main list of vertices*/
-        g->g = new_node(g->g, i);
+        g->g = new_node(g->g, i, labelNum);
     }
 
     /* load edges*/
@@ -114,7 +133,7 @@ graph_t *graph_load(char *filename) {
     return g;
 }
 
-static vertex_t *new_node(vertex_t *g, int id) { /*Add a new vertex node into main list*/
+static vertex_t *new_node(vertex_t *g, int id, int labelNum) { /*Add a new vertex node into main list*/
     vertex_t*v;
     v = (vertex_t*)malloc(sizeof(vertex_t));
     v->id = id;
@@ -123,6 +142,12 @@ static vertex_t *new_node(vertex_t *g, int id) { /*Add a new vertex node into ma
     v->scc = v->disc_time = v->endp_time = -1;
     v->pred= NULL; v->head = NULL;
     v->next= g;
+    v->right_label=(int*)calloc(labelNum, sizeof(int));
+    v->left_label=(int*)calloc(labelNum, sizeof(int));
+    if(v->right_label==NULL || v->left_label==NULL){
+        fprintf(stderr, "Error in array of lables allocation\n");
+        exit(1);
+    }
 
     return v;
 }
@@ -170,9 +195,12 @@ vertex_t *graph_find(graph_t *g, int id) { /*It is often necessary to avoid line
     return NULL;
 }
 
-void graph_dispose(graph_t*g) { /*Free list of lists*/
+void graph_dispose(graph_t *g) { /*Free list of lists*/
+    printf("HIOOOOOOOOOOOOOOIIIIII");
+
     vertex_t *v; edge_t *e;
     v = g->g;
+    printf("HIIIIIII");
     while(v != NULL) {
         while(v->head != NULL) {
             e = v->head;
@@ -182,29 +210,31 @@ void graph_dispose(graph_t*g) { /*Free list of lists*/
         v = v->next;
         free (v);
     }
-
+    printf("HeeeeeeeeeeeeeIII");
     return;
 }
 
-void graph_dfs(graph_t *g, vertex_t *n) {
+void graph_dfs(graph_t *g, vertex_t *n, int index) {
     int currTime=0;
     vertex_t *tmp, *tmp2;
     printf("List of edges:\n");
-    currTime = graph_dfs_r (g, n, currTime);
+    currTime = graph_dfs_r (g, n, currTime, index);
     for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
         if(tmp->color == WHITE) {
-            currTime= graph_dfs_r(g, tmp, currTime);
+            currTime= graph_dfs_r(g, tmp, currTime, index);
         }
     }
     printf("List of vertices:\n");
     for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
         tmp2 = tmp->pred;
-        printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time, (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label, tmp->right_label);
+        //printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time, (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label, tmp->right_label);
+            printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
+                    (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
     }
 
 }
 
-int graph_dfs_r(graph_t *g, vertex_t *n, int currTime) {
+int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     vertex_t *tmp;
     edge_t *e;
     vertex_t *t;
@@ -229,14 +259,14 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime) {
         }
         if (t->color == WHITE) {
             t->pred = n;
-            currTime = graph_dfs_r(g, t, currTime);
+            currTime = graph_dfs_r(g, t, currTime, index);
         }
         e = e->next;
     }
     n->color = BLACK;
     n->endp_time = ++currTime;
-    n->right_label= post_order_index++;
-    n->left_label=50;
+    n->right_label[index]= ++post_order_index[index];
+    n->left_label[index]=50;
 //    if(n->next==NULL)
 //        n->left_label = n->right_label;
 //    else{
@@ -250,13 +280,13 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime) {
             //currTime = graph_dfs_r(g, t, currTime);
 
     if(n->head==NULL)
-        n->left_label=n->right_label;
+        n->left_label[index]=n->right_label[index];
     else{
         for(e=n->head; e!=NULL; e=e->next){
             t = e->dst;
-                if(t->left_label<n->left_label)
-                    n->left_label=t->left_label;
-        } 
+                if(t->left_label[index]<n->left_label[index])
+                    n->left_label[index]=t->left_label[index];
+        }
     }
 
 
