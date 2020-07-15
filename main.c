@@ -85,13 +85,13 @@ int main(int argc, char **argv){
         printf("%d %d\n", mat[i][0], mat[i][1]);
     }
 
-    for(i=0;i<labelNum;i++){
+    for(int j=0;j<labelNum;j++){
         printf("(DFS) Initial vertex? ");
         scanf("%d", &i);
         src= graph_find(g, i);
         graph_attribute_init(g);
 
-        graph_dfs(g, src, i);
+        graph_dfs(g, src, j);
     }
 
     printf("FS ENE\n");
