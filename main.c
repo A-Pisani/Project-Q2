@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <time.h>
+#include <string.h>
 
 #define MAX_LINE 100
 enum{WHITE, GREY, BLACK};
@@ -99,9 +100,10 @@ int main(int argc, char **argv){
 
     printf("loading queries\nQueries are:\n");
     int **mat = queries_load(argv[3], &queryNum);
-    for(i=0; i<queryNum;i++){
-        printf("%d %d\n", mat[i][0], mat[i][1]);
-    }
+    //UNCOMMENT TO SHOW QUERIES
+//    for(i=0; i<queryNum;i++){
+//        printf("%d %d\n", mat[i][0], mat[i][1]);
+//    }
 
     for(int j=0;j<labelNum;j++){
         //printf("(DFS) Initial vertex? ");
@@ -121,10 +123,10 @@ int main(int argc, char **argv){
         src= graph_find(g, mat[i][0]);
         dst= graph_find(g, mat[i][1]);
         graph_attribute_init(g, 0);
-        if(isReachableDFS(src, dst, g, labelNum))
-            printf("%d reaches %d\n", mat[i][0], mat[i][1]);
-        else
-            printf("%d does not reach %d\n", mat[i][0], mat[i][1]);
+        if(isReachableDFS(src, dst, g, labelNum));
+            //printf("%d reaches %d\n", mat[i][0], mat[i][1]);
+        //else
+           // printf("%d does not reach %d\n", mat[i][0], mat[i][1]);
 
     }
 
@@ -141,7 +143,8 @@ graph_t *graph_load(char *filename, int labelNum) {
     graph_t *g;
     int i, j, k, weight, dir;
     FILE *fp;
-    char character;
+    char *character;
+   // char character;
     g = (graph_t*) calloc(1, sizeof(graph_t));
     fp = fopen(filename, "r");
     fscanf(fp, "%d", &g->nv);
@@ -155,12 +158,12 @@ graph_t *graph_load(char *filename, int labelNum) {
     for (i=g->nv-1; i>=0; i--) {
         fscanf(fp, "%d: ", &k);
         //printf("%d\n", i);
-        do{
-            fscanf(fp, "%c ", &character);
-            j = atoi(&character);
-            if(character!='#')
-                new_edge(g, k, j);
-        }while(character!='#');
+       do{
+           fscanf(fp, "%s ", character);
+           j = atoi(character);
+           if(character[0]!='#')
+               new_edge(g, k, j);
+       }while(character[0]!='#');
     }
 
     fclose(fp);
@@ -240,17 +243,23 @@ vertex_t *graph_find(graph_t *g, int id) { /*It is often necessary to avoid line
 
 void graph_dispose(graph_t *g) { /*Free list of lists*/
 
-    vertex_t *v; edge_t *e;
+    vertex_t *v, *curr; edge_t *e;
     v = g->g;
     while(v != NULL) {
-        while(v->head != NULL) {
-            e = v->head;
-            v->head = e->next;
+        curr=v;
+        while(curr->head != NULL) {
+            e = curr->head;
+            curr->head = e->next;
             free(e);
         }
-        v = v->next;
-        free (v);
+        //for(int i=0; i< labelNum;i++){
+            free(curr->right_label);
+            free(curr->left_label);
+        free(curr->color);
+        v = curr->next;
+        free(curr);
     }
+    free(g);
     return;
 }
 
@@ -260,7 +269,7 @@ void graph_dfs(graph_t *g, vertex_t *n, int index) {
     n->visited=1;
     ////////////////////////
     vertex_t *tmp, *tmp2;
-    printf("List of edges:\n");
+   // printf("List of edges:\n");
     currTime = graph_dfs_r (g, n, currTime, index);
     // PERFORMS A DFS ON ISLANDS
     for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
@@ -269,12 +278,12 @@ void graph_dfs(graph_t *g, vertex_t *n, int index) {
             currTime= graph_dfs_r(g, tmp, currTime, index);
         }
     }
-    printf("List of vertices:\n");
+    //printf("List of vertices:\n");
     for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
         tmp2 = tmp->pred;
         //printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time, (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label, tmp->right_label);
-            printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
-                    (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
+          //  printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
+            //        (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
     }
 
 }
@@ -290,16 +299,16 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
         t = e->dst;
         switch (t->color[index]) {
             case WHITE:
-                printf("%d -> %d : T\n", n->id, t->id);
+               // printf("%d -> %d : T\n", n->id, t->id);
                 break;
             case GREY :
-                printf("%d -> %d : B\n", n->id, t->id);
+               // printf("%d -> %d : B\n", n->id, t->id);
                 break;
             case BLACK:
                 if (n->disc_time < t->disc_time) {
-                    printf("%d -> %d : F\n", n->disc_time, t->disc_time);
+                    //printf("%d -> %d : F\n", n->disc_time, t->disc_time);
                 } else {
-                    printf("%d -> %d : C\n", n->id, t->id);
+                 //   printf("%d -> %d : C\n", n->id, t->id);
                 }
         }
         if (t->color[index] == WHITE) {
@@ -375,7 +384,7 @@ int Randoms(int lower, int upper, int count){
     int i, num;
     for (i = 0; i < count; i++) {
          num = (rand() % (upper - lower + 1)) + lower;
-        printf("Randomly selected node is:      %d \n", num);
+       // printf("Randomly selected node is:      %d \n", num);
     }
     return num;
 }
@@ -411,16 +420,16 @@ int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
         t = e->dst;
         switch (t->tmpColor) {
             case WHITE:
-                printf("%d -> %d : T\n", u->id, t->id);
+               // printf("%d -> %d : T\n", u->id, t->id);
                 break;
             case GREY :
-                printf("%d -> %d : B\n", u->id, t->id);
+              //  printf("%d -> %d : B\n", u->id, t->id);
                 break;
             case BLACK:
                 if (u->disc_time < t->disc_time) {
-                    printf("%d -> %d : F\n", u->disc_time, t->disc_time);
+                   // printf("%d -> %d : F\n", u->disc_time, t->disc_time);
                 } else {
-                    printf("%d -> %d : C\n", u->id, t->id);
+                   // printf("%d -> %d : C\n", u->id, t->id);
                 }
         }
         if (t->tmpColor == WHITE) {
