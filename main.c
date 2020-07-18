@@ -54,7 +54,8 @@ void graph_attribute_init(graph_t *g, int index);
 vertex_t *graph_find(graph_t *g, int id);
 void graph_dispose(graph_t*g);
 // LOAD QUERIES
-int **queries_load(char *filename, int *size);
+//int **queries_load(char *filename, int *size);
+void queries_checker(char *filename, graph_t *g, int labelNum);
 void queriesDispose(int **mat, int size);
 //DFS VISIT prototypes
 void graph_dfs(graph_t *g, vertex_t *n, int index);
@@ -67,14 +68,13 @@ int isContained(vertex_t *v, vertex_t *u, int d);
 
 
 int main(int argc, char **argv){
-    int i=0, queryNum=0;
-    vertex_t *src, *dst;
+    int i=0;
+    vertex_t *src;
 
-    int lower = 0, upper = 7, count = 1;
+    int lower = 0, count = 1;
 
     // Use current time as seed for random generator
     srand(time(0));
-
 
 
     if(argc!=4){
@@ -96,20 +96,12 @@ int main(int argc, char **argv){
         fprintf(stderr, "Error in array of indeces allocation\n");
         exit(1);
     }
-    /*ADDED */
-
-    printf("loading queries\nQueries are:\n");
-    int **mat = queries_load(argv[3], &queryNum);
-    //UNCOMMENT TO SHOW QUERIES
-//    for(i=0; i<queryNum;i++){
-//        printf("%d %d\n", mat[i][0], mat[i][1]);
-//    }
 
     for(int j=0;j<labelNum;j++){
         //printf("(DFS) Initial vertex? ");
         //scanf("%d", &i);
         do{
-            i = Randoms(lower, upper, count);
+            i = Randoms(lower, g->nv-1, count);
             src= graph_find(g, i);
         }while(src->visited!=-1);
         graph_attribute_init(g, j);
@@ -119,29 +111,17 @@ int main(int argc, char **argv){
 
     printf("************ CHECK QUERIES ************\n");
 
-    for(i=0;i< queryNum;i++){
-        src= graph_find(g, mat[i][0]);
-        dst= graph_find(g, mat[i][1]);
-        graph_attribute_init(g, 0);
-        if(isReachableDFS(src, dst, g, labelNum));
-            //printf("%d reaches %d\n", mat[i][0], mat[i][1]);
-        //else
-           // printf("%d does not reach %d\n", mat[i][0], mat[i][1]);
-
-    }
-
+    queries_checker(argv[3], g, labelNum);
 
     printf("************ END ************\n");
 
     graph_dispose(g);
     free(post_order_index);
-    queriesDispose(mat, queryNum);
-
 }
 
 graph_t *graph_load(char *filename, int labelNum) {
     graph_t *g;
-    int i, j, k, weight, dir;
+    int i, j, k;
     FILE *fp;
     char *character;
    // char character;
@@ -242,7 +222,6 @@ vertex_t *graph_find(graph_t *g, int id) { /*It is often necessary to avoid line
 }
 
 void graph_dispose(graph_t *g) { /*Free list of lists*/
-
     vertex_t *v, *curr; edge_t *e;
     v = g->g;
     while(v != NULL) {
@@ -289,7 +268,7 @@ void graph_dfs(graph_t *g, vertex_t *n, int index) {
 }
 
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
-    vertex_t *tmp;
+    //vertex_t *tmp;
     edge_t *e;
     vertex_t *t;
     n->color[index] = GREY;
@@ -330,7 +309,6 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
 //        }
 //    }
 
-
             //currTime = graph_dfs_r(g, t, currTime);
 
     if(n->head==NULL)
@@ -347,28 +325,25 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     return currTime;
 }
 
-int **queries_load(char *filename, int *size){
-    int **mat;
+void queries_checker(char *filename, graph_t *g, int labelNum){
+    vertex_t *src, *dst;
     int num=0, tmp1, tmp2;
-    FILE *fp2;
-    //mat = (int**) calloc(1, sizeof(int*));
-    fp2 = fopen(filename, "r");
+    FILE *fp2= fopen(filename, "r");
 
     while(fscanf(fp2, "%d %d", &tmp1, &tmp2)!=EOF){
         num++;
+        src= graph_find(g, tmp1);
+        dst= graph_find(g, tmp2);
+        graph_attribute_init(g, 0);
+        if(isReachableDFS(src, dst, g, labelNum))
+            printf("%d reaches %d\n", tmp1, tmp2);
+        else
+            printf("%d does not reach %d\n", tmp1, tmp2);
     }
-    mat = (int**) malloc(num*sizeof(int*));
 
-    rewind(fp2);
-    for(int i=0; i<num;i++){
-        mat[i]=(int*) malloc(2*sizeof(int));
-        fscanf(fp2, "%d %d", &mat[i][0], &mat[i][1]);
-    }
-
-    *size=num;
     fclose(fp2);
 
-    return mat;
+    return;
 }
 
 void queriesDispose(int **mat, int size){
@@ -378,8 +353,7 @@ void queriesDispose(int **mat, int size){
     free(mat);
 }
 
-// Generates and prints 'count' random
-// numbers in range [lower, upper].
+// Generates and returns 'count' random numbers in range [lower, upper].
 int Randoms(int lower, int upper, int count){
     int i, num;
     for (i = 0; i < count; i++) {
