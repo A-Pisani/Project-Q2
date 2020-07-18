@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <limits.h>
 #include <time.h>
-#include <string.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 #define MAX_LINE 100
 enum{WHITE, GREY, BLACK};
@@ -42,8 +43,18 @@ struct vertex_s{
     int tmpColor;
 };
 
+typedef struct threadData{
+    pthread_t threadID;
+    int ID;
+    int line;
+    FILE *fp;
+    graph_t *g;
+    vertex_t *n;
+}threadD;
+
 //int post_order_index=1;
 int *post_order_index;
+sem_t *sem;
 
 
 //LOAD GRAPH
@@ -58,19 +69,24 @@ void graph_dispose(graph_t*g);
 void queries_checker(char *filename, graph_t *g, int labelNum);
 void queriesDispose(int **mat, int size);
 //DFS VISIT prototypes
-void graph_dfs(graph_t *g, vertex_t *n, int index);
+//void graph_dfs(graph_t *g, vertex_t *n, int index);
+void *graph_dfs(void *);
+
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index);
 //
 int Randoms(int lower, int upper, int count);
 // QUERY Reachability check
 int isReachableDFS(vertex_t *v, vertex_t *u, graph_t *g, int d);
 int isContained(vertex_t *v, vertex_t *u, int d);
+//
+//static void *threadFunction(void *);
 
 
 int main(int argc, char **argv){
     int i=0;
     vertex_t *src;
-
+    threadD *td;
+    void *retval;
     int lower = 0, count = 1;
 
     // Use current time as seed for random generator
@@ -85,6 +101,14 @@ int main(int argc, char **argv){
         exit (1);
     }
     int labelNum= atoi(argv[2]);
+
+    sem = (sem_t *)malloc(sizeof(sem_t));
+    sem_init(sem, 0, 1);     //0 -> not_shared; 1 -> init_value
+    td = (threadD *)malloc(labelNum* sizeof(threadD));
+    if(td == NULL){
+        fprintf (stderr, "Error allocating threads \n" );
+        exit (1);
+    }
 
     printf("loading graph\n");
     graph_t *g = graph_load(argv[1], labelNum);
@@ -104,9 +128,19 @@ int main(int argc, char **argv){
             i = Randoms(lower, g->nv-1, count);
             src= graph_find(g, i);
         }while(src->visited!=-1);
-        graph_attribute_init(g, j);
-        graph_dfs(g, src, j);
 
+        td[j].ID=j;
+        td[j].n=src;
+        td[j].g=g;
+        graph_attribute_init(g, j);
+        //fprintf(stdout, "Created thread %d\n", td[j].ID);
+        pthread_create(&td[j].threadID, NULL, graph_dfs, (void *) &td[j]);
+
+        //graph_dfs(g, src, j);
+    }
+
+    for(int i=0; i<labelNum; i++){
+        pthread_join(td[i].threadID, retval);
     }
 
     printf("************ CHECK QUERIES ************\n");
@@ -242,29 +276,60 @@ void graph_dispose(graph_t *g) { /*Free list of lists*/
     return;
 }
 
-void graph_dfs(graph_t *g, vertex_t *n, int index) {
+//void graph_dfs(graph_t *g, vertex_t *n, int index) {
+//    int currTime=0;
+//    //CHECK IT EFFECTIVELY WORKS.
+//    n->visited=1;
+//    ////////////////////////
+//    vertex_t *tmp, *tmp2;
+//   // printf("List of edges:\n");
+//    currTime = graph_dfs_r (g, n, currTime, index);
+//    // PERFORMS A DFS ON ISLANDS
+//    for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
+//        if(tmp->color[index] == WHITE) {
+//           // printf("Root of the DFS %2d\n", tmp->id);
+//            currTime= graph_dfs_r(g, tmp, currTime, index);
+//        }
+//    }
+//    //printf("List of vertices:\n");
+//    for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
+//        tmp2 = tmp->pred;
+//        //printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time, (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label, tmp->right_label);
+//          //  printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
+//            //        (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
+//    }
+//
+//}
+void *graph_dfs(void *param) {
+
+    int n, readval;
+    threadD *td ;
+    td = (threadD *) param;
+    fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
     int currTime=0;
     //CHECK IT EFFECTIVELY WORKS.
-    n->visited=1;
+    sem_wait(sem);
+        td->n->visited=1;
+    sem_post(sem);
+
     ////////////////////////
     vertex_t *tmp, *tmp2;
-   // printf("List of edges:\n");
-    currTime = graph_dfs_r (g, n, currTime, index);
+    // printf("List of edges:\n");
+    currTime = graph_dfs_r (td->g, td->n, currTime, td->ID);
     // PERFORMS A DFS ON ISLANDS
-    for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
-        if(tmp->color[index] == WHITE) {
-           // printf("Root of the DFS %2d\n", tmp->id);
-            currTime= graph_dfs_r(g, tmp, currTime, index);
+    for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
+        if(tmp->color[td->ID] == WHITE) {
+            // printf("Root of the DFS %2d\n", tmp->id);
+            currTime= graph_dfs_r(td->g, tmp, currTime, td->ID);
         }
     }
     //printf("List of vertices:\n");
-    for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
+    for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
         tmp2 = tmp->pred;
-        //printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time, (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label, tmp->right_label);
-          //  printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
-            //        (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
+          printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
+                (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[td->ID], tmp->right_label[td->ID]);
     }
-
+    pthread_exit((void *) 1) ;
 }
 
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
@@ -339,6 +404,7 @@ void queries_checker(char *filename, graph_t *g, int labelNum){
             printf("%d reaches %d\n", tmp1, tmp2);
         else
             printf("%d does not reach %d\n", tmp1, tmp2);
+        //if(isReachableDFS(src, dst, g, labelNum));
     }
 
     fclose(fp2);
@@ -358,7 +424,7 @@ int Randoms(int lower, int upper, int count){
     int i, num;
     for (i = 0; i < count; i++) {
          num = (rand() % (upper - lower + 1)) + lower;
-       // printf("Randomly selected node is:      %d \n", num);
+       printf("Randomly selected node is:      %d \n", num);
     }
     return num;
 }
