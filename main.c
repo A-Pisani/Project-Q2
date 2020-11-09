@@ -130,6 +130,8 @@ int main(int argc, char **argv){
         }while(src->visited!=-1);
 
         // TO AVOID PROBLEMS SET HERE src->visited = 1 AND NOT IN GRAPH_FIND
+        src->visited = 1;
+        ///////////////////////////////////////////////////////////////////
         td[j].ID=j;
         td[j].n=src;
         td[j].g=g;
@@ -311,12 +313,12 @@ void *graph_dfs(void *param) {
     td = (threadD *) param;
     fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
     int currTime=0;
-    //CHECK IT EFFECTIVELY WORKS. LEADS TO A SMALL BUG, ADJUST IT.
+/*     //CHECK IT EFFECTIVELY WORKS. LEADS TO A SMALL BUG, ADJUST IT.
     sem_wait(sem);
         td->n->visited=1;
     sem_post(sem);
 
-    ////////////////////////
+    //////////////////////// */
     vertex_t *tmp, *tmp2;
     // printf("List of edges:\n");
     currTime = graph_dfs_r (td->g, td->n, currTime, td->ID);
@@ -345,7 +347,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     e = n->head;
     while (e != NULL) {
         t = e->dst;
-        switch (t->color[index]) {
+        /*switch (t->color[index]) {
             case WHITE:
                // printf("%d -> %d : T\n", n->id, t->id);
                 break;
@@ -358,7 +360,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
                 } else {
                  //   printf("%d -> %d : C\n", n->id, t->id);
                 }
-        }
+        }*/
         if (t->color[index] == WHITE) {
             t->pred = n;
             currTime = graph_dfs_r(g, t, currTime, index);
@@ -380,6 +382,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
 
             //currTime = graph_dfs_r(g, t, currTime);
 
+    // if so WE ARE ON A LEAF
     if(n->head==NULL)
         n->left_label[index]=n->right_label[index];
     else{
@@ -462,7 +465,7 @@ int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
     e = u->head;
     while (e != NULL) {
         t = e->dst;
-        switch (t->tmpColor) {
+     /*    switch (t->tmpColor) {
             case WHITE:
                // printf("%d -> %d : T\n", u->id, t->id);
                 break;
@@ -475,7 +478,7 @@ int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
                 } else {
                    // printf("%d -> %d : C\n", u->id, t->id);
                 }
-        }
+        } */
         if (t->tmpColor == WHITE) {
             t->pred = u;
             if(isReachableDFS(v, t, g, d))
