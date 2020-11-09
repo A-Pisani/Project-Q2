@@ -53,7 +53,7 @@ typedef struct threadData{
 }threadD;
 
 //int post_order_index=1;
-int *post_order_index;
+int *post_order_index; //array
 sem_t *sem;
 
 
@@ -125,10 +125,11 @@ int main(int argc, char **argv){
         //printf("(DFS) Initial vertex? ");
         //scanf("%d", &i);
         do{
-            i = Randoms(lower, g->nv-1, count);
-            src= graph_find(g, i);
+            i = Randoms(lower, g->nv-1, count); // finds "count" (one) rand number between [0, nv-1]
+            src= graph_find(g, i); //src è di tipo vertex_t
         }while(src->visited!=-1);
 
+        // TO AVOID PROBLEMS SET HERE src->visited = 1 AND NOT IN GRAPH_FIND
         td[j].ID=j;
         td[j].n=src;
         td[j].g=g;
@@ -174,9 +175,12 @@ graph_t *graph_load(char *filename, int labelNum) {
         //printf("%d\n", i);
        do{
            fscanf(fp, "%s ", character);
-           j = atoi(character);
-           if(character[0]!='#')
+           //
+           if(character[0]!='#'){
+               j = atoi(character);
                new_edge(g, k, j);
+           }
+
        }while(character[0]!='#');
     }
 
@@ -307,7 +311,7 @@ void *graph_dfs(void *param) {
     td = (threadD *) param;
     fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
     int currTime=0;
-    //CHECK IT EFFECTIVELY WORKS.
+    //CHECK IT EFFECTIVELY WORKS. LEADS TO A SMALL BUG, ADJUST IT.
     sem_wait(sem);
         td->n->visited=1;
     sem_post(sem);
