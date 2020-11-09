@@ -330,11 +330,11 @@ void *graph_dfs(void *param) {
         }
     }
     //printf("List of vertices:\n");
-    for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
+/*     for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
         tmp2 = tmp->pred;
           printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
                 (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[td->ID], tmp->right_label[td->ID]);
-    }
+    } */
     pthread_exit((void *) 1) ;
 }
 
@@ -451,43 +451,31 @@ int Randoms(int lower, int upper, int count){
  *  return false; // u does not reach v
  * */
 int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
-    if(!isContained(u, v, d))
+    if(!isContained(u, v, d)){
         return 0;
-
-    /*
-     * CHECK IT WORKSSSSSSS
-     */
-    vertex_t *tmp;
-    edge_t *e;
-    vertex_t *t;
-    u->tmpColor = GREY;
-    //u->disc_time = ++currTime;
-    e = u->head;
-    while (e != NULL) {
-        t = e->dst;
-     /*    switch (t->tmpColor) {
-            case WHITE:
-               // printf("%d -> %d : T\n", u->id, t->id);
-                break;
-            case GREY :
-              //  printf("%d -> %d : B\n", u->id, t->id);
-                break;
-            case BLACK:
-                if (u->disc_time < t->disc_time) {
-                   // printf("%d -> %d : F\n", u->disc_time, t->disc_time);
-                } else {
-                   // printf("%d -> %d : C\n", u->id, t->id);
-                }
-        } */
-        if (t->tmpColor == WHITE) {
-            t->pred = u;
-            if(isReachableDFS(v, t, g, d))
-                return 1;
+    }else if(u->id == v->id){
+        return 1;
+    }else{
+        /*
+        * CHECK IT WORKSSSSSSS
+        */
+        vertex_t *tmp;
+        edge_t *e;
+        vertex_t *t;
+        u->tmpColor = GREY;
+        //u->disc_time = ++currTime;
+        e = u->head;
+        while (e != NULL) {
+            t = e->dst;
+                t->pred = u;
+                // if(t->tmpColor==WHITE){
+                    if(isReachableDFS(t, v, g, d))
+                        return 1;
+                //}
+            e = e->next;
         }
-        e = e->next;
+        return 0;
     }
-
-    return 1;
 }
 
 int isContained(vertex_t *u, vertex_t *v, int d){
