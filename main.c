@@ -4,9 +4,12 @@
 #include <limits.h>
 #include <time.h>
 #include <string.h>
+#include <sys/time.h>
 
 #define MAX_LINE 100
 enum{WHITE, GREY, BLACK};
+int choice;
+
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
 typedef struct edge_s edge_t;
@@ -65,17 +68,15 @@ int Randoms(int lower, int upper, int count);
 // QUERY Reachability check
 int isReachableDFS(vertex_t *v, vertex_t *u, graph_t *g, int d);
 int isContained(vertex_t *v, vertex_t *u, int d);
+int menu(void);
 
 
 int main(int argc, char **argv){
-    int i=0;
     vertex_t *src;
-
-    int lower = 0, count = 1;
+    int i=0, lower = 0, count = 1;
 
     // Use current time as seed for random generator
     srand(time(0));
-
 
     if(argc!=4){
         fprintf (stderr, "Run as: %s p1 p2 p3\n", argv[0]);
@@ -86,32 +87,53 @@ int main(int argc, char **argv){
     }
     int labelNum= atoi(argv[2]);
 
-    printf("loading graph\n");
+   choice = menu();
+
+    printf("************ LOADING GRAPH **************\n");
+    clock_t begin = clock();
+
     graph_t *g = graph_load(argv[1], labelNum);
 
+    clock_t end = clock();
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
-    /*ADDED */
+    if(choice==1)
+        printf("Graph Construction time (s): %lf\n", time_spent);
+
+
     post_order_index=(int*)calloc(labelNum, sizeof(int));
     if(post_order_index==NULL){
         fprintf(stderr, "Error in array of indeces allocation\n");
         exit(1);
     }
 
+    printf("************ RANDOMIZED LABELING ************\n");
+    begin = clock();
+
     for(int j=0;j<labelNum;j++){
-        //printf("(DFS) Initial vertex? ");
-        //scanf("%d", &i);
         do{
             i = Randoms(lower, g->nv-1, count);
             src= graph_find(g, i);
         }while(src->visited!=-1);
         graph_attribute_init(g, j);
         graph_dfs(g, src, j);
-
     }
 
-    printf("************ CHECK QUERIES ************\n");
+    end = clock();
+    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+    if(choice==1)
+        printf("Construction time (s): %lf\n", time_spent);
+    printf("************ CHECKING QUERIES ************\n");
+
+    begin = clock();
 
     queries_checker(argv[3], g, labelNum);
+
+    end = clock();
+    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    if(choice==1)
+        printf("Query time (s): %lf\n", time_spent);
 
     printf("************ END ************\n");
 
@@ -124,11 +146,11 @@ graph_t *graph_load(char *filename, int labelNum) {
     int i, j, k;
     FILE *fp;
     char *character;
-   // char character;
     g = (graph_t*) calloc(1, sizeof(graph_t));
     fp = fopen(filename, "r");
     fscanf(fp, "%d", &g->nv);
-    printf("Graph number of vertices: %d\n", g->nv);
+    if(choice == 2)
+        printf("Graph number of vertices: %d\n", g->nv);
     /* create initial structure for vertices */
     for (i=g->nv-1; i>=0; i--) {        /*Creates main list of vertices*/
         g->g = new_node(g->g, i, labelNum);
@@ -140,14 +162,13 @@ graph_t *graph_load(char *filename, int labelNum) {
         //printf("%d\n", i);
        do{
            fscanf(fp, "%s ", character);
-           j = atoi(character);
-           if(character[0]!='#')
+           if(character[0]!='#'){
+               j = atoi(character);
                new_edge(g, k, j);
+           }
        }while(character[0]!='#');
     }
-
     fclose(fp);
-
     return g;
 }
 
@@ -155,12 +176,10 @@ static vertex_t *new_node(vertex_t *g, int id, int labelNum) { /*Add a new verte
     vertex_t*v;
     v = (vertex_t*)malloc(sizeof(vertex_t));
     v->id = id;
-    //v->color = WHITE;
     v->dist= INT_MAX;
     v->scc = v->disc_time = v->endp_time = -1;
     v->pred= NULL; v->head = NULL;
     v->next= g;
-    // ADDED CODE
     v->tmpColor=WHITE;
     v->visited=-1;
     v->right_label=(int*)calloc(labelNum, sizeof(int));
@@ -173,7 +192,6 @@ static vertex_t *new_node(vertex_t *g, int id, int labelNum) { /*Add a new verte
     for(int i=0; i<labelNum;i++){
         v->color[i]=WHITE;
     }
-
     return v;
 }
 
@@ -185,10 +203,7 @@ static void new_edge( graph_t *g, int i, int j) { /*Add a new edge node into sec
     e = (edge_t*) malloc(sizeof(edge_t));
     e->dst= dst;
     e->next= src->head; src->head = e;
-
-    //DEBUG comment to not show
     //printf("created edge %d -> %d\n", i, j);
-
     return;
 }
 
@@ -205,7 +220,6 @@ void graph_attribute_init(graph_t *g, int index) {
         v->pred= NULL;
         v = v->next;
     }
-
     return;
 }
 
@@ -231,9 +245,8 @@ void graph_dispose(graph_t *g) { /*Free list of lists*/
             curr->head = e->next;
             free(e);
         }
-        //for(int i=0; i< labelNum;i++){
-            free(curr->right_label);
-            free(curr->left_label);
+        free(curr->right_label);
+        free(curr->left_label);
         free(curr->color);
         v = curr->next;
         free(curr);
@@ -257,13 +270,15 @@ void graph_dfs(graph_t *g, vertex_t *n, int index) {
             currTime= graph_dfs_r(g, tmp, currTime, index);
         }
     }
-    //printf("List of vertices:\n");
-    for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
-        tmp2 = tmp->pred;
-        //printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time, (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label, tmp->right_label);
-          //  printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
-            //        (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
-    }
+    //PRINT LABELS
+        if(choice==2){
+           printf("List of vertices (and labels):\n"); 
+           for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
+                tmp2 = tmp->pred;
+                printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
+                        (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
+           }  
+        }
 
 }
 
@@ -299,7 +314,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     n->color[index] = BLACK;
     n->endp_time = ++currTime;
     n->right_label[index]= ++post_order_index[index];
-    n->left_label[index]=50;
+    n->left_label[index]=g->nv+1;
 //    if(n->next==NULL)
 //        n->left_label = n->right_label;
 //    else{
@@ -327,22 +342,22 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
 
 void queries_checker(char *filename, graph_t *g, int labelNum){
     vertex_t *src, *dst;
-    int num=0, tmp1, tmp2;
+    int tmp1, tmp2;
     FILE *fp2= fopen(filename, "r");
 
     while(fscanf(fp2, "%d %d", &tmp1, &tmp2)!=EOF){
-        num++;
         src= graph_find(g, tmp1);
         dst= graph_find(g, tmp2);
-        graph_attribute_init(g, 0);
-        if(isReachableDFS(src, dst, g, labelNum))
-            printf("%d reaches %d\n", tmp1, tmp2);
-        else
-            printf("%d does not reach %d\n", tmp1, tmp2);
+
+        if(isReachableDFS(src, dst, g, labelNum)){
+                if(choice==3)
+                    printf("%d reaches %d\n", tmp1, tmp2);
+            }else{
+                if(choice==3)
+                    printf("%d does not reach %d\n", tmp1, tmp2);
+            }
     }
-
     fclose(fp2);
-
     return;
 }
 
@@ -363,7 +378,6 @@ int Randoms(int lower, int upper, int count){
     return num;
 }
 
-
 /*
  * Function isReachableDFS(u, v, G):
  *  if Lv!⊆ Lu then
@@ -378,43 +392,28 @@ int Randoms(int lower, int upper, int count){
  *  return false; // u does not reach v
  * */
 int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
-    if(!isContained(u, v, d))
+    if(!isContained(u, v, d)){
         return 0;
-
-    /*
-     * CHECK IT WORKSSSSSSS
-     */
-    vertex_t *tmp;
-    edge_t *e;
-    vertex_t *t;
-    u->tmpColor = GREY;
-    //u->disc_time = ++currTime;
-    e = u->head;
-    while (e != NULL) {
-        t = e->dst;
-        switch (t->tmpColor) {
-            case WHITE:
-               // printf("%d -> %d : T\n", u->id, t->id);
-                break;
-            case GREY :
-              //  printf("%d -> %d : B\n", u->id, t->id);
-                break;
-            case BLACK:
-                if (u->disc_time < t->disc_time) {
-                   // printf("%d -> %d : F\n", u->disc_time, t->disc_time);
-                } else {
-                   // printf("%d -> %d : C\n", u->id, t->id);
-                }
+    }else if(u->id == v->id){
+        return 1;
+    }else{
+        /* CHECK IT WORKSSSSSSS */
+        edge_t *e;
+        vertex_t *t;
+        u->tmpColor = GREY;
+        //u->disc_time = ++currTime;
+        e = u->head;
+        while (e != NULL) {
+            t = e->dst;
+                t->pred = u;
+                // if(t->tmpColor==WHITE){
+                    if(isReachableDFS(t, v, g, d))
+                        return 1;
+                //}
+            e = e->next;
         }
-        if (t->tmpColor == WHITE) {
-            t->pred = u;
-            if(isReachableDFS(v, t, g, d))
-                return 1;
-        }
-        e = e->next;
+        return 0;
     }
-
-    return 1;
 }
 
 int isContained(vertex_t *u, vertex_t *v, int d){
@@ -425,7 +424,27 @@ int isContained(vertex_t *u, vertex_t *v, int d){
     return 1;
 }
 
+int menu(void){
+    int choice;
 
+    do {
+        printf("\n******************  MENU   ************************");
+        printf("\nEXECUTION TIME enter    1");
+        printf("\nDEBUGGING INFORMATION enter     2");
+        printf("\nQUERY RESULTS enter   3");
+        printf("\nEnter your choice: ");
+        scanf("%d", &choice);
+        (void) getchar(); //clean the input of newline
+        if(choice != 1 && choice != 2 && choice != 3){
+            printf("ERROR: please enter a valid alternative\n");
+        }
+
+        printf("\n***************************************************\n");
+    }while(choice != 1 && choice != 2 && choice != 3);
+
+  return choice;
+    
+}
 
 
 
