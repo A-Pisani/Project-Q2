@@ -25,7 +25,6 @@ struct edge_s{
 };
 struct vertex_s{
     int id;
-    //int color;
     int *color;
     int dist;
     int disc_time;
@@ -34,10 +33,7 @@ struct vertex_s{
     vertex_t *pred;
     edge_t *head;
     vertex_t *next;
-    // Labels   MUST BECOME AN ARRAY
-//    int left_label;
-//    int right_label;
-    int *left_label;
+    int *left_label;   // Labels   MUST BE AN ARRAY
     int *right_label;
     //if already visited set to 1 (initialized to -1)
     int visited;
@@ -146,7 +142,6 @@ int main(int argc, char **argv){
         graph_attribute_init(g, j);
         //fprintf(stdout, "Created thread %d\n", td[j].ID);
         pthread_create(&td[j].threadID, NULL, graph_dfs, (void *) &td[j]);
-
         //graph_dfs(g, src, j);
     }
 
@@ -233,9 +228,7 @@ graph_t *graph_load(char *filename, int labelNum) {
 
        }while(character[0]!='#');
     }
-
     fclose(fp);
-
     return g;
 }
 
@@ -273,10 +266,8 @@ static void new_edge( graph_t *g, int i, int j) { /*Add a new edge node into sec
     e = (edge_t*) malloc(sizeof(edge_t));
     e->dst= dst;
     e->next= src->head; src->head = e;
-
     //DEBUG comment to not show
     //printf("created edge %d -> %d\n", i, j);
-
     return;
 }
 
@@ -293,7 +284,6 @@ void graph_attribute_init(graph_t *g, int index) {
         v->pred= NULL;
         v = v->next;
     }
-
     return;
 }
 
@@ -429,8 +419,6 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
                     n->left_label[index]=t->left_label[index];
         }
     }
-
-
     return currTime;
 }
 
@@ -438,7 +426,6 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
 //     vertex_t *src, *dst;
 //     int num=0, tmp1, tmp2;
 //     FILE *fp2= fopen(filename, "r");
-
 //     while(fscanf(fp2, "%d %d", &tmp1, &tmp2)!=EOF){
 //         num++;
 //         src= graph_find(g, tmp1);
@@ -450,9 +437,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
 //             printf("%d does not reach %d\n", tmp1, tmp2);
 //         //if(isReachableDFS(src, dst, g, labelNum));
 //     }
-
 //     fclose(fp2);
-
 //     return;
 // }
 
@@ -509,9 +494,7 @@ int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
     }else if(u->id == v->id){
         return 1;
     }else{
-        /*
-        * CHECK IT WORKSSSSSSS
-        */
+        /* CHECK IT WORKSSSSSSS */
         edge_t *e;
         vertex_t *t;
         u->tmpColor = GREY;
@@ -554,8 +537,4 @@ void queriesDispose(int **mat, int size){
     }
     free(mat);
 }
-
-
-
-
 
