@@ -7,7 +7,7 @@
 #include <semaphore.h>
 
 #define MAX_LINE 100
-#define NUM_T 10                    // MODIFY TO SEE WHICH #OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 8                    // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
 enum{WHITE, GREY, BLACK};
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
@@ -51,6 +51,7 @@ typedef struct threadData{
 
 //int post_order_index=1;
 int *post_order_index; //array
+int choice;
 sem_t *sem;
 
 //LOAD GRAPH
@@ -75,6 +76,7 @@ int Randoms(int lower, int upper, int count);
 // QUERY Reachability check
 int isReachableDFS(vertex_t *v, vertex_t *u, graph_t *g, int d);
 int isContained(vertex_t *v, vertex_t *u, int d);
+int menu(void);
 
 
 int main(int argc, char **argv){
@@ -95,6 +97,8 @@ int main(int argc, char **argv){
     }
     int labelNum= atoi(argv[2]);
 
+    choice = menu();
+
     sem = (sem_t *)malloc(sizeof(sem_t));
     sem_init(sem, 0, 1);     //0 -> not_shared; 1 -> init_value
     td = (threadD *)malloc(labelNum* sizeof(threadD));
@@ -103,8 +107,16 @@ int main(int argc, char **argv){
         exit (1);
     }
 
-    printf("loading graph\n");
+    printf("************ LOADING GRAPH **************\n");
+    clock_t begin = clock();
+
     graph_t *g = graph_load(argv[1], labelNum);
+
+    clock_t end = clock();
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+    if(choice==1)
+        printf("Graph Construction time (ms): %lf\n", time_spent);
 
     post_order_index=(int*)calloc(labelNum, sizeof(int));
     if(post_order_index==NULL){
@@ -112,7 +124,8 @@ int main(int argc, char **argv){
         exit(1);
     }
 
-    clock_t begin = clock();
+    printf("************ RANDOMIZED LABELING ************\n");
+    begin = clock();
 
     for(int j=0;j<labelNum;j++){        
         // Randomized traversal strategy (RandomizedLabeling)
@@ -137,11 +150,12 @@ int main(int argc, char **argv){
         pthread_join(td[i].threadID, retval);
     }
     
-    clock_t end = clock();
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    end = clock();
+    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
-    printf("Construction time (ms): %lf\n", time_spent);
-    printf("************ CHECK QUERIES ************\n");
+    if(choice==1)
+        printf("Construction time (ms): %lf\n", time_spent);
+    printf("************ CHECKING QUERIES ************\n");
 
     td2 = (threadD *)malloc(NUM_T* sizeof(threadD));
     if(td2 == NULL){
@@ -163,7 +177,7 @@ int main(int argc, char **argv){
         pthread_create(&td2[j].threadID, NULL, queries_checker, (void *) &td2[j]);
     }
 
-    printf("************ YAYYYY QUERIES DONE, NOW JOIN ************\n");
+    //printf("************ YAYYYY QUERIES DONE, NOW JOIN ************\n");
 
     for(int i=0; i<NUM_T; i++){
         pthread_join(td2[i].threadID, retval);
@@ -171,7 +185,8 @@ int main(int argc, char **argv){
 
     end = clock();
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    printf("Query time (ms): %lf\n", time_spent);
+    if(choice==1)
+        printf("Query time (ms): %lf\n", time_spent);
 
     //queries_checker(argv[3], g, labelNum);    //call to sequential function
 
@@ -189,7 +204,8 @@ graph_t *graph_load(char *filename, int labelNum) {
     g = (graph_t*) calloc(1, sizeof(graph_t));
     fp = fopen(filename, "r");
     fscanf(fp, "%d", &g->nv);
-    printf("Graph number of vertices: %d\n", g->nv);
+    if(choice == 2)
+        printf("Graph number of vertices: %d\n", g->nv);
     /* create initial structure for vertices */
     for (i=g->nv-1; i>=0; i--) {        /*Creates main list of vertices*/
         g->g = new_node(g->g, i, labelNum);
@@ -324,7 +340,8 @@ void *graph_dfs(void *param) {
     //int n, readval;
     threadD *td ;
     td = (threadD *) param;
-    fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
+    if(choice==2)
+        fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
     int currTime=0;
 /*     //CHECK IT EFFECTIVELY WORKS. LEADS TO A SMALL BUG, ADJUST IT.
     sem_wait(sem);
@@ -332,7 +349,7 @@ void *graph_dfs(void *param) {
     sem_post(sem);
 
     //////////////////////// */
-    vertex_t *tmp;
+    vertex_t *tmp, *tmp2;
     // printf("List of edges:\n");
     currTime = graph_dfs_r (td->g, td->n, currTime, td->ID);
     // PERFORMS A DFS ON ISLANDS
@@ -342,12 +359,16 @@ void *graph_dfs(void *param) {
             currTime= graph_dfs_r(td->g, tmp, currTime, td->ID);
         }
     }
-    //printf("List of vertices:\n"); PRINT LABELS
-    //  for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
-    //     tmp2 = tmp->pred;
-    //       printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
-    //             (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[td->ID], tmp->right_label[td->ID]);
-    // } 
+    
+    //PRINT LABELS
+        if(choice==2){
+           printf("List of vertices (and labels):\n"); 
+           for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
+                tmp2 = tmp->pred;
+                printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
+                        (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[td->ID], tmp->right_label[td->ID]);
+           }  
+        }
     pthread_exit((void *) 1) ;
 }
 
@@ -435,9 +456,11 @@ void *queries_checker(void *param){
             dst= graph_find(g, tmp2);
             //graph_attribute_init(g, 0);               // think is useless...
             if(isReachableDFS(src, dst, g, labelNum)){
-                //printf("%d reaches %d\n", tmp1, tmp2);
+                if(choice==3)
+                    printf("%d reaches %d\n", tmp1, tmp2);
             }else{
-                //printf("%d does not reach %d\n", tmp1, tmp2);
+                if(choice==3)
+                    printf("%d does not reach %d\n", tmp1, tmp2);
             }
         }
        // sleep(1);
@@ -497,7 +520,8 @@ int Randoms(int lower, int upper, int count){
     int i, num;
     for (i = 0; i < count; i++) {
          num = (rand() % (upper - lower + 1)) + lower;
-       printf("Randomly selected node is:      %d \n", num);
+         if(choice==2)
+            printf("Randomly selected node is:      %d \n", num);
     }
     return num;
 }
@@ -509,3 +533,33 @@ void queriesDispose(int **mat, int size){
     free(mat);
 }
 
+int menu(void){
+    int choice;
+
+    do {
+        printf("\n******************  MENU   ************************");
+        printf("\nEXECUTION TIME enter    1");
+        printf("\nDEBUGGING INFORMATION enter     2");
+        printf("\nQUERY RESULTS enter   3");
+        printf("\nEnter your choice: ");
+        scanf("%d", &choice);
+        printf("\n***************************************************\n");
+
+        switch (choice) {
+        case 1: 
+                //printf("your choice was: %d\n", choice);
+          break;
+        case 2: 
+                //printf("your choice was: %d\n", choice);
+          break;
+        case 3: 
+                //printf("your choice was: %d\n", choice);
+        break;
+        default:
+          printf("Error! Try again please\n");
+        }
+  }while(choice != 1 && choice != 2 && choice != 3);
+
+  return choice;
+    
+}
