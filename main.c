@@ -53,7 +53,6 @@ typedef struct threadData{
 int *post_order_index; //array
 sem_t *sem;
 
-
 //LOAD GRAPH
 static vertex_t *new_node(vertex_t *g, int id, int labelNum);
 graph_t *graph_load(char *filename, int labelNum);
@@ -64,11 +63,11 @@ void graph_dispose(graph_t*g);
 // LOAD QUERIES
 //int **queries_load(char *filename, int *size);
 //void queries_checker(char *filename, graph_t *g, int labelNum);       //SEQUENTIAL VERSION
-void *queries_checker(void *);         //PARALLEL VERSION
+void *queries_checker(void *);                                          //PARALLEL VERSION
 void queriesDispose(int **mat, int size);
 //DFS VISIT prototypes
-//void graph_dfs(graph_t *g, vertex_t *n, int index);
-void *graph_dfs(void *);
+//void graph_dfs(graph_t *g, vertex_t *n, int index);                   //SEQUENTIAL VERSION
+void *graph_dfs(void *);                                                //PARALLEL VERSION
 
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index);
 //
@@ -76,20 +75,16 @@ int Randoms(int lower, int upper, int count);
 // QUERY Reachability check
 int isReachableDFS(vertex_t *v, vertex_t *u, graph_t *g, int d);
 int isContained(vertex_t *v, vertex_t *u, int d);
-//
-//static void *threadFunction(void *);
 
 
 int main(int argc, char **argv){
-    int i=0;
+    int i=0, lower = 0, count = 1;
     vertex_t *src;
     threadD *td, *td2;
     void *retval;
-    int lower = 0, count = 1;
 
     // Use current time as seed for random generator
     srand(time(0));
-
 
     if(argc!=4){
         fprintf (stderr, "Run as: %s p1 p2 p3\n", argv[0]);
@@ -104,35 +99,29 @@ int main(int argc, char **argv){
     sem_init(sem, 0, 1);     //0 -> not_shared; 1 -> init_value
     td = (threadD *)malloc(labelNum* sizeof(threadD));
     if(td == NULL){
-        fprintf (stderr, "Error allocating threads \n" );
+        fprintf (stderr, "Error allocating threads\n" );
         exit (1);
     }
 
     printf("loading graph\n");
     graph_t *g = graph_load(argv[1], labelNum);
 
-
-    /*ADDED */
     post_order_index=(int*)calloc(labelNum, sizeof(int));
     if(post_order_index==NULL){
         fprintf(stderr, "Error in array of indeces allocation\n");
         exit(1);
     }
 
-
     clock_t begin = clock();
 
-/* here, do your time-consuming job */
-
-    for(int j=0;j<labelNum;j++){
-        //printf("(DFS) Initial vertex? ");
-        //scanf("%d", &i);
+    for(int j=0;j<labelNum;j++){        
+        // Randomized traversal strategy (RandomizedLabeling)
         do{
             i = Randoms(lower, g->nv-1, count); // finds "count" (one) rand number between [0, nv-1]
-            src= graph_find(g, i); //src è di tipo vertex_t
+            src= graph_find(g, i);              //src is of type vertex_t
         }while(src->visited!=-1);
 
-        // TO AVOID PROBLEMS SET HERE src->visited = 1 AND NOT IN GRAPH_FIND
+        // TO AVOID PROBLEMS SET HERE src->visited = 1 AND NOT IN GRAPH_DFS
         src->visited = 1;
         ///////////////////////////////////////////////////////////////////
         td[j].ID=j;
@@ -140,11 +129,9 @@ int main(int argc, char **argv){
         td[j].g=g;
         td[j].labelNum = labelNum;
         graph_attribute_init(g, j);
-        //fprintf(stdout, "Created thread %d\n", td[j].ID);
         pthread_create(&td[j].threadID, NULL, graph_dfs, (void *) &td[j]);
-        //graph_dfs(g, src, j);
+        //graph_dfs(g, src, j);      // call to sequential function
     }
-
 
     for(int i=0; i<labelNum; i++){
         pthread_join(td[i].threadID, retval);
@@ -154,7 +141,6 @@ int main(int argc, char **argv){
     double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
     printf("Construction time (ms): %lf\n", time_spent);
-
     printf("************ CHECK QUERIES ************\n");
 
     td2 = (threadD *)malloc(NUM_T* sizeof(threadD));
@@ -170,16 +156,13 @@ int main(int argc, char **argv){
     for(int j=0;j<NUM_T;j++){
         //set-up threads fields
         td2[j].ID=j;
-        //td[j].n=src;
         td2[j].g=g;
         td2[j].fp = fp2;
         td2[j].labelNum = labelNum;
         //graph_attribute_init(g, j);
-        //fprintf(stdout, "Created thread %d\n", td[j].ID);
         pthread_create(&td2[j].threadID, NULL, queries_checker, (void *) &td2[j]);
     }
 
-    
     printf("************ YAYYYY QUERIES DONE, NOW JOIN ************\n");
 
     for(int i=0; i<NUM_T; i++){
@@ -190,8 +173,7 @@ int main(int argc, char **argv){
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     printf("Query time (ms): %lf\n", time_spent);
 
-
-    //queries_checker(argv[3], g, labelNum);
+    //queries_checker(argv[3], g, labelNum);    //call to sequential function
 
     printf("************ END ************\n");
 
@@ -204,7 +186,6 @@ graph_t *graph_load(char *filename, int labelNum) {
     int i, j, k;
     FILE *fp;
     char *character;
-   // char character;
     g = (graph_t*) calloc(1, sizeof(graph_t));
     fp = fopen(filename, "r");
     fscanf(fp, "%d", &g->nv);
@@ -220,12 +201,10 @@ graph_t *graph_load(char *filename, int labelNum) {
         //printf("%d\n", i);
        do{
            fscanf(fp, "%s ", character);
-           //
            if(character[0]!='#'){
                j = atoi(character);
                new_edge(g, k, j);
            }
-
        }while(character[0]!='#');
     }
     fclose(fp);
@@ -236,12 +215,10 @@ static vertex_t *new_node(vertex_t *g, int id, int labelNum) { /*Add a new verte
     vertex_t*v;
     v = (vertex_t*)malloc(sizeof(vertex_t));
     v->id = id;
-    //v->color = WHITE;
     v->dist= INT_MAX;
     v->scc = v->disc_time = v->endp_time = -1;
     v->pred= NULL; v->head = NULL;
     v->next= g;
-    // ADDED CODE
     v->tmpColor=WHITE;
     v->visited=-1;
     v->right_label=(int*)calloc(labelNum, sizeof(int));
@@ -254,7 +231,6 @@ static vertex_t *new_node(vertex_t *g, int id, int labelNum) { /*Add a new verte
     for(int i=0; i<labelNum;i++){
         v->color[i]=WHITE;
     }
-
     return v;
 }
 
@@ -266,7 +242,6 @@ static void new_edge( graph_t *g, int i, int j) { /*Add a new edge node into sec
     e = (edge_t*) malloc(sizeof(edge_t));
     e->dst= dst;
     e->next= src->head; src->head = e;
-    //DEBUG comment to not show
     //printf("created edge %d -> %d\n", i, j);
     return;
 }
@@ -309,9 +284,8 @@ void graph_dispose(graph_t *g) { /*Free list of lists*/
             curr->head = e->next;
             free(e);
         }
-        //for(int i=0; i< labelNum;i++){
-            free(curr->right_label);
-            free(curr->left_label);
+        free(curr->right_label);
+        free(curr->left_label);
         free(curr->color);
         v = curr->next;
         free(curr);
@@ -344,6 +318,7 @@ void graph_dispose(graph_t *g) { /*Free list of lists*/
 //    }
 //
 //}
+
 void *graph_dfs(void *param) {
 
     //int n, readval;
@@ -406,9 +381,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
 //                n->left_label=tmp->left_label;
 //        }
 //    }
-
             //currTime = graph_dfs_r(g, t, currTime);
-
     // if so WE ARE ON A LEAF
     if(n->head==NULL)
         n->left_label[index]=n->right_label[index];
@@ -446,15 +419,13 @@ void *queries_checker(void *param){
     threadD *td ;
     td = (threadD *) param;
     //fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
-
     // parameters of sequential queries_checker
     graph_t *g= td->g;
     int labelNum = td->labelNum;
     int readval;
-
     vertex_t *src, *dst;
     int tmp1, tmp2;
-
+    
     do{
         sem_wait(sem);
             readval = fscanf(td->fp, "%d %d", &tmp1, &tmp2);
