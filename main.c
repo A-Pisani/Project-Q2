@@ -393,7 +393,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     ////////////////////////////////////////////
     /////// DOES IT ACTUALLY WORK ???? /////////
     ////////////////////////////////////////////
-    n->left_label[index]=50;
+    n->left_label[index]=g->nv +1;
 //    if(n->next==NULL)
 //        n->left_label = n->right_label;
 //    else{
@@ -535,6 +535,7 @@ void queriesDispose(int **mat, int size){
 
 int menu(void){
     int choice;
+    char str[5];
 
     do {
         printf("\n******************  MENU   ************************");
@@ -543,22 +544,13 @@ int menu(void){
         printf("\nQUERY RESULTS enter   3");
         printf("\nEnter your choice: ");
         scanf("%d", &choice);
-        printf("\n***************************************************\n");
-
-        switch (choice) {
-        case 1: 
-                //printf("your choice was: %d\n", choice);
-          break;
-        case 2: 
-                //printf("your choice was: %d\n", choice);
-          break;
-        case 3: 
-                //printf("your choice was: %d\n", choice);
-        break;
-        default:
-          printf("Error! Try again please\n");
+        (void) getchar(); //clean the input of newline
+        if(choice != 1 && choice != 2 && choice != 3){
+            printf("ERROR: please enter a valid alternative\n");
         }
-  }while(choice != 1 && choice != 2 && choice != 3);
+
+        printf("\n***************************************************\n");
+    }while(choice != 1 && choice != 2 && choice != 3);
 
   return choice;
     
