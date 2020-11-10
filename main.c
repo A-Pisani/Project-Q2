@@ -7,7 +7,7 @@
 #include <semaphore.h>
 
 #define MAX_LINE 100
-#define NUM_T 8                    // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 1      // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
 enum{WHITE, GREY, BLACK};
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
@@ -52,7 +52,8 @@ typedef struct threadData{
 //int post_order_index=1;
 int *post_order_index; //array
 int choice;
-sem_t *sem;
+//sem_t *sem;
+pthread_mutex_t sem;
 
 //LOAD GRAPH
 static vertex_t *new_node(vertex_t *g, int id, int labelNum);
@@ -77,6 +78,7 @@ int Randoms(int lower, int upper, int count);
 int isReachableDFS(vertex_t *v, vertex_t *u, graph_t *g, int d);
 int isContained(vertex_t *v, vertex_t *u, int d);
 int menu(void);
+vertex_t **graph_find_couple(graph_t *g, int id, int id2);
 
 
 int main(int argc, char **argv){
@@ -99,8 +101,9 @@ int main(int argc, char **argv){
 
     choice = menu();
 
-    sem = (sem_t *)malloc(sizeof(sem_t));
-    sem_init(sem, 0, 1);     //0 -> not_shared; 1 -> init_value
+    //sem = (sem_t *)malloc(sizeof(sem_t));
+    //sem_init(sem, 0, 1);     //0 -> not_shared; 1 -> init_value
+    pthread_mutex_init(&sem, NULL); 
     td = (threadD *)malloc(labelNum* sizeof(threadD));
     if(td == NULL){
         fprintf (stderr, "Error allocating threads\n" );
@@ -290,6 +293,7 @@ vertex_t *graph_find(graph_t *g, int id) { /*It is often necessary to avoid line
     return NULL;
 }
 
+
 void graph_dispose(graph_t *g) { /*Free list of lists*/
     vertex_t *v, *curr; edge_t *e;
     v = g->g;
@@ -309,31 +313,6 @@ void graph_dispose(graph_t *g) { /*Free list of lists*/
     free(g);
     return;
 }
-
-//void graph_dfs(graph_t *g, vertex_t *n, int index) {
-//    int currTime=0;
-//    //CHECK IT EFFECTIVELY WORKS.
-//    n->visited=1;
-//    ////////////////////////
-//    vertex_t *tmp, *tmp2;
-//   // printf("List of edges:\n");
-//    currTime = graph_dfs_r (g, n, currTime, index);
-//    // PERFORMS A DFS ON ISLANDS
-//    for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
-//        if(tmp->color[index] == WHITE) {
-//           // printf("Root of the DFS %2d\n", tmp->id);
-//            currTime= graph_dfs_r(g, tmp, currTime, index);
-//        }
-//    }
-//    //printf("List of vertices:\n");
-//    for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
-//        tmp2 = tmp->pred;
-//        //printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time, (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label, tmp->right_label);
-//          //  printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
-//            //        (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
-//    }
-//
-//}
 
 void *graph_dfs(void *param) {
 
@@ -394,15 +373,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     /////// DOES IT ACTUALLY WORK ???? /////////
     ////////////////////////////////////////////
     n->left_label[index]=g->nv +1;
-//    if(n->next==NULL)
-//        n->left_label = n->right_label;
-//    else{
-//        for (tmp=n->next; tmp!=NULL; tmp=tmp->next) {
-//            if(tmp->left_label<n->left_label)
-//                n->left_label=tmp->left_label;
-//        }
-//    }
-            //currTime = graph_dfs_r(g, t, currTime);
+
     // if so WE ARE ON A LEAF
     if(n->head==NULL)
         n->left_label[index]=n->right_label[index];
@@ -416,26 +387,6 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     return currTime;
 }
 
-// void queries_checker(char *filename, graph_t *g, int labelNum){
-//     vertex_t *src, *dst;
-//     int num=0, tmp1, tmp2;
-//     FILE *fp2= fopen(filename, "r");
-//     while(fscanf(fp2, "%d %d", &tmp1, &tmp2)!=EOF){
-//         num++;
-//         src= graph_find(g, tmp1);
-//         dst= graph_find(g, tmp2);
-//         graph_attribute_init(g, 0);
-//         if(isReachableDFS(src, dst, g, labelNum))
-//             printf("%d reaches %d\n", tmp1, tmp2);
-//         else
-//             printf("%d does not reach %d\n", tmp1, tmp2);
-//         //if(isReachableDFS(src, dst, g, labelNum));
-//     }
-//     fclose(fp2);
-//     return;
-// }
-
-
 void *queries_checker(void *param){
     threadD *td ;
     td = (threadD *) param;
@@ -444,16 +395,22 @@ void *queries_checker(void *param){
     graph_t *g= td->g;
     int labelNum = td->labelNum;
     int readval;
-    vertex_t *src, *dst;
+    vertex_t *src, *dst, **couple;
     int tmp1, tmp2;
+    int num=0;
     
     do{
-        sem_wait(sem);
+        //sem_wait(sem);
+        pthread_mutex_lock(&sem);
             readval = fscanf(td->fp, "%d %d", &tmp1, &tmp2);
-        sem_post(sem);
+            //printf("thread %d performing line %d\n", td->ID, num++);
+        //sem_post(sem);
+        pthread_mutex_unlock(&sem);
         if(readval != EOF){
+            
+           // printf("%d %d\n", couple[0]->id, couple[1]->id);
             src= graph_find(g, tmp1);
-            dst= graph_find(g, tmp2);
+            dst= graph_find(g, tmp2);           //MAYBE THEY CAN BE FOUND IN A SINGLE ROUND.........
             //graph_attribute_init(g, 0);               // think is useless...
             if(isReachableDFS(src, dst, g, labelNum)){
                 if(choice==3)
@@ -488,19 +445,14 @@ int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
     }else if(u->id == v->id){
         return 1;
     }else{
-        /* CHECK IT WORKSSSSSSS */
         edge_t *e;
         vertex_t *t;
-        u->tmpColor = GREY;
-        //u->disc_time = ++currTime;
         e = u->head;
         while (e != NULL) {
             t = e->dst;
                 t->pred = u;
-                // if(t->tmpColor==WHITE){
                     if(isReachableDFS(t, v, g, d))
                         return 1;
-                //}
             e = e->next;
         }
         return 0;
