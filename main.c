@@ -87,7 +87,9 @@ int main(int argc, char **argv){
     }
     int labelNum= atoi(argv[2]);
 
-   choice = menu();
+    printf("************ SEQUENTIAL GRAIL VERSION **************\n");
+
+    choice = menu();
 
     printf("************ LOADING GRAPH **************\n");
     clock_t begin = clock();
