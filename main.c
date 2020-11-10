@@ -7,7 +7,7 @@
 #include <semaphore.h>
 
 #define MAX_LINE 100
-#define NUM_T 1      // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 4      // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
 enum{WHITE, GREY, BLACK};
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
@@ -98,6 +98,8 @@ int main(int argc, char **argv){
         exit (1);
     }
     int labelNum= atoi(argv[2]);
+
+    printf("************ PARALLEL GRAIL VERSION **************\n");
 
     choice = menu();
 
