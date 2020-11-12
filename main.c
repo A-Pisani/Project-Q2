@@ -7,7 +7,7 @@
 #include <semaphore.h>
 
 #define MAX_LINE 100
-#define NUM_T 4      // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 1     // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
 enum{WHITE, GREY, BLACK};
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
@@ -182,7 +182,6 @@ int main(int argc, char **argv){
         pthread_create(&td2[j].threadID, NULL, queries_checker, (void *) &td2[j]);
     }
 
-    //printf("************ YAYYYY QUERIES DONE, NOW JOIN ************\n");
 
     for(int i=0; i<NUM_T; i++){
         pthread_join(td2[i].threadID, retval);
