@@ -147,9 +147,13 @@ graph_t *graph_load(char *filename, int labelNum) {
     graph_t *g;
     int i, j, k;
     FILE *fp;
-    char *character;
+    char character[100];
     g = (graph_t*) calloc(1, sizeof(graph_t));
     fp = fopen(filename, "r");
+    if(fp==NULL){
+        fprintf(stderr, "Error reading from file %s\n", filename);
+        exit(1);
+    }
     fscanf(fp, "%d", &g->nv);
     if(choice == 2)
         printf("Graph number of vertices: %d\n", g->nv);
