@@ -26,10 +26,8 @@ struct edge_s{
 struct vertex_s{
     int id;
     int *color;
-    int dist;
     int disc_time;
     int endp_time;
-    int scc;
     vertex_t *pred;
     edge_t *head;
     vertex_t *next;
@@ -152,7 +150,7 @@ int main(int argc, char **argv){
     }
 
     for(int i=0; i<labelNum; i++){
-        pthread_join(td[i].threadID, retval);
+        pthread_join(td[i].threadID, NULL);
     }
     
     end = clock();
@@ -184,7 +182,7 @@ int main(int argc, char **argv){
 
 
     for(int i=0; i<NUM_T; i++){
-        pthread_join(td2[i].threadID, retval);
+        pthread_join(td2[i].threadID, NULL);
     }
 
     end = clock();
@@ -204,9 +202,13 @@ graph_t *graph_load(char *filename, int labelNum) {
     graph_t *g;
     int i, j, k;
     FILE *fp;
-    char *character;
+    char character[100];
     g = (graph_t*) calloc(1, sizeof(graph_t));
     fp = fopen(filename, "r");
+    if(fp == NULL){
+        printf("error opening %s\n", filename);
+        exit(0);
+    }
     fscanf(fp, "%d", &g->nv);
     if(choice == 2)
         printf("Graph number of vertices: %d\n", g->nv);
@@ -235,8 +237,7 @@ static vertex_t *new_node(vertex_t *g, int id, int labelNum) { /*Add a new verte
     vertex_t*v;
     v = (vertex_t*)malloc(sizeof(vertex_t));
     v->id = id;
-    v->dist= INT_MAX;
-    v->scc = v->disc_time = v->endp_time = -1;
+    v->disc_time = v->endp_time = -1;
     v->pred= NULL; v->head = NULL;
     v->next= g;
     v->tmpColor=WHITE;
@@ -272,10 +273,8 @@ void graph_attribute_init(graph_t *g, int index) {
     while(v!=NULL) {
         v->color[index] = WHITE;
         v->tmpColor=WHITE;
-        v->dist= INT_MAX;
         v->disc_time= -1;
         v->endp_time= -1;
-        v->scc= -1;
         v->pred= NULL;
         v = v->next;
     }
