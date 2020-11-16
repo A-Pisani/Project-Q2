@@ -7,7 +7,7 @@
 #include <semaphore.h>
 
 #define MAX_LINE 100
-#define NUM_T 1  // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 2  // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
 enum{WHITE, GREY, BLACK};
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
@@ -53,7 +53,7 @@ struct query_s{
     int src;
     int dst;
 };
-#define SIZE 1024
+#define SIZE 20000
 query_t queue[SIZE]; //FIFO standard non ADT without n
 int head=0, tail=0;
 sem_t empty;
@@ -203,21 +203,21 @@ int main(int argc, char **argv){
     queries_reader(argv[3], g, labelNum);    //call to sequential function
 
 
-    // for(int i=0; i<NUM_T; i++){
-    //     pthread_join(td2[i].threadID, NULL);
-    // }
+     for(int i=0; i<NUM_T; i++){
+         pthread_join(td2[i].threadID, NULL);
+     }
 
     end = clock();
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     if(choice==1)
-        printf("Query time (ms): %lf\n", time_spent);
+        printf("Query time (s): %lf\n", time_spent);
 
 
     printf("************ END ************\n");
+   // sleep(100);
 
     graph_dispose(g);
     free(post_order_index);
-    sleep(50);
 }
 
 graph_t *graph_load(char *filename, int labelNum) {
@@ -425,6 +425,8 @@ void *queries_checker(void *param){
         pthread_mutex_unlock(&sem);
         sem_post(&empty);
         // CONSUME
+            if(query.src==-1)
+                return (int *)1;
             src= graph_find(g, query.src);
             dst= graph_find(g, query.dst);           //MAYBE THEY CAN BE FOUND IN A SINGLE ROUND.........
             if(isReachableDFS(src, dst, g, labelNum)){
@@ -453,10 +455,10 @@ void *queries_checker(void *param){
  *  return false; // u does not reach v
  * */
 int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
-    if(!isContained(u, v, d)){
-        return 0;
-    }else if(u->id == v->id){
+    if(u->id == v->id){
         return 1;
+    }else if(!isContained(u, v, d)){
+        return 0;
     }else{
         edge_t *e;
         vertex_t *t;
@@ -541,6 +543,13 @@ void queries_reader(char *filename, graph_t *g, int labelNum){
     FILE *fp2= fopen(filename, "r");
 
     while(fscanf(fp2, "%d %d", &query.src, &query.dst)!=EOF){
+        sem_wait(&empty);
+            enqueue(query);
+        sem_post(&full);
+    }
+    query.src=-1;
+    query.dst=-1;
+    for(int i=0; i<labelNum;i++){
         sem_wait(&empty);
             enqueue(query);
         sem_post(&full);
