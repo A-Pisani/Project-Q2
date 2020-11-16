@@ -102,7 +102,6 @@ int main(int argc, char **argv){
     if(choice==1)
         printf("Graph Construction time (s): %lf\n", time_spent);
 
-
     post_order_index=(int*)calloc(labelNum, sizeof(int));
     if(post_order_index==NULL){
         fprintf(stderr, "Error in array of indeces allocation\n");
@@ -123,6 +122,15 @@ int main(int argc, char **argv){
 
     end = clock();
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+    printf("\n");
+    for(vertex_t *v=g->g; v!=NULL;v=v->next){
+        printf("node %d :", v->id);
+         for(int i=0; i<labelNum; i++){
+            printf(" index%d [%d, %d] ", i, v->left_label[i], v->right_label[i]);
+         }
+         printf("\n");
+    }
 
     if(choice==1)
         printf("Construction time (s): %lf\n", time_spent);
@@ -297,20 +305,6 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     e = n->head;
     while (e != NULL) {
         t = e->dst;
-        switch (t->color[index]) {
-            case WHITE:
-               // printf("%d -> %d : T\n", n->id, t->id);
-                break;
-            case GREY :
-               // printf("%d -> %d : B\n", n->id, t->id);
-                break;
-            case BLACK:
-                if (n->disc_time < t->disc_time) {
-                    //printf("%d -> %d : F\n", n->disc_time, t->disc_time);
-                } else {
-                 //   printf("%d -> %d : C\n", n->id, t->id);
-                }
-        }
         if (t->color[index] == WHITE) {
             t->pred = n;
             currTime = graph_dfs_r(g, t, currTime, index);
@@ -367,13 +361,6 @@ void queries_checker(char *filename, graph_t *g, int labelNum){
     return;
 }
 
-void queriesDispose(int **mat, int size){
-    for(int i=0;i<size;i++){
-        free(mat[i]);
-    }
-    free(mat);
-}
-
 // Generates and returns 'count' random numbers in range [lower, upper].
 int Randoms(int lower, int upper, int count){
     int i, num;
@@ -397,25 +384,42 @@ int Randoms(int lower, int upper, int count){
  *  end
  *  return false; // u does not reach v
  * */
+// int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
+//     if(!isContained(u, v, d)){
+//         return 0;
+//     }else if(u->id == v->id){
+//         return 1;
+//     }else{
+//         edge_t *e;
+//         vertex_t *t;
+//         //u->disc_time = ++currTime;
+//         e = u->head;
+//         while (e != NULL) {
+//             t = e->dst;
+//                 t->pred = u;
+//                     if(isReachableDFS(t, v, g, d))
+//                         return 1;
+//             e = e->next;
+//         }
+//         return 0;
+//     }
+// }
+
 int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
     if(!isContained(u, v, d)){
         return 0;
     }else if(u->id == v->id){
         return 1;
     }else{
-        /* CHECK IT WORKSSSSSSS */
         edge_t *e;
         vertex_t *t;
-        u->tmpColor = GREY;
         //u->disc_time = ++currTime;
         e = u->head;
         while (e != NULL) {
             t = e->dst;
-                t->pred = u;
-                // if(t->tmpColor==WHITE){
+                if(isContained(t,v,d))
                     if(isReachableDFS(t, v, g, d))
                         return 1;
-                //}
             e = e->next;
         }
         return 0;
