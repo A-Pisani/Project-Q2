@@ -7,11 +7,12 @@
 #include <semaphore.h>
 
 #define MAX_LINE 100
-#define NUM_T 1     // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 1  // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
 enum{WHITE, GREY, BLACK};
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
 typedef struct edge_s edge_t;
+typedef struct query_s query_t;
 /* graph wrapper*/
 struct graph_s{
     vertex_t* g;
@@ -47,6 +48,18 @@ typedef struct threadData{
     vertex_t *n;
 }threadD;
 
+//////// QUEUE PROD & CONS ///////////
+struct query_s{
+    int src;
+    int dst;
+};
+#define SIZE 1024
+query_t queue[SIZE]; //FIFO standard non ADT without n
+int head=0, tail=0;
+sem_t empty;
+sem_t full;
+
+
 //int post_order_index=1;
 int *post_order_index; //array
 int choice;
@@ -62,7 +75,7 @@ vertex_t *graph_find(graph_t *g, int id);
 void graph_dispose(graph_t*g);
 // LOAD QUERIES
 //int **queries_load(char *filename, int *size);
-//void queries_checker(char *filename, graph_t *g, int labelNum);       //SEQUENTIAL VERSION
+void queries_reader(char *filename, graph_t *g, int labelNum);       //SEQUENTIAL VERSION
 void *queries_checker(void *);                                          //PARALLEL VERSION
 void queriesDispose(int **mat, int size);
 //DFS VISIT prototypes
@@ -77,6 +90,10 @@ int isReachableDFS(vertex_t *v, vertex_t *u, graph_t *g, int d);
 int isContained(vertex_t *v, vertex_t *u, int d);
 int menu(void);
 vertex_t **graph_find_couple(graph_t *g, int id, int id2);
+
+//////// QUEUE ENQ & DEQ ///////////
+void enqueue(query_t query);
+void dequeue(query_t *query);
 
 
 int main(int argc, char **argv){
@@ -104,6 +121,8 @@ int main(int argc, char **argv){
     //sem = (sem_t *)malloc(sizeof(sem_t));
     //sem_init(sem, 0, 1);     //0 -> not_shared; 1 -> init_value
     pthread_mutex_init(&sem, NULL); 
+    sem_init(&full, 0, 0);     //0 -> not_shared; 0 -> init_value
+    sem_init(&empty, 0, SIZE);     //0 -> not_shared; SIZE -> init_value
     td = (threadD *)malloc(labelNum* sizeof(threadD));
     if(td == NULL){
         fprintf (stderr, "Error allocating threads\n" );
@@ -166,36 +185,39 @@ int main(int argc, char **argv){
         exit (1);
     }
 
-    FILE *fp2= fopen(argv[3], "r");
+   // FILE *fp2= fopen(argv[3], "r");
 
     begin = clock();
+
 
     for(int j=0;j<NUM_T;j++){
         //set-up threads fields
         td2[j].ID=j;
         td2[j].g=g;
-        td2[j].fp = fp2;
+        //td2[j].fp = fp2;
         td2[j].labelNum = labelNum;
         //graph_attribute_init(g, j);
         pthread_create(&td2[j].threadID, NULL, queries_checker, (void *) &td2[j]);
     }
 
+    queries_reader(argv[3], g, labelNum);    //call to sequential function
 
-    for(int i=0; i<NUM_T; i++){
-        pthread_join(td2[i].threadID, NULL);
-    }
+
+    // for(int i=0; i<NUM_T; i++){
+    //     pthread_join(td2[i].threadID, NULL);
+    // }
 
     end = clock();
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     if(choice==1)
         printf("Query time (ms): %lf\n", time_spent);
 
-    //queries_checker(argv[3], g, labelNum);    //call to sequential function
 
     printf("************ END ************\n");
 
     graph_dispose(g);
     free(post_order_index);
+    sleep(50);
 }
 
 graph_t *graph_load(char *filename, int labelNum) {
@@ -391,37 +413,28 @@ void *queries_checker(void *param){
     threadD *td ;
     td = (threadD *) param;
     //fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
-    // parameters of sequential queries_checker
     graph_t *g= td->g;
     int labelNum = td->labelNum;
-    int readval;
-    vertex_t *src, *dst, **couple;
-    int tmp1, tmp2;
-    int num=0;
+    vertex_t *src, *dst;
+    query_t query;
     
     do{
-        //sem_wait(sem);
+        sem_wait(&full);
         pthread_mutex_lock(&sem);
-            readval = fscanf(td->fp, "%d %d", &tmp1, &tmp2);
-            //printf("thread %d performing line %d\n", td->ID, num++);
-        //sem_post(sem);
+            dequeue(&query);
         pthread_mutex_unlock(&sem);
-        if(readval != EOF){
-            
-           // printf("%d %d\n", couple[0]->id, couple[1]->id);
-            src= graph_find(g, tmp1);
-            dst= graph_find(g, tmp2);           //MAYBE THEY CAN BE FOUND IN A SINGLE ROUND.........
-            //graph_attribute_init(g, 0);               // think is useless...
+        sem_post(&empty);
+        // CONSUME
+            src= graph_find(g, query.src);
+            dst= graph_find(g, query.dst);           //MAYBE THEY CAN BE FOUND IN A SINGLE ROUND.........
             if(isReachableDFS(src, dst, g, labelNum)){
                 if(choice==3)
-                    printf("%d reaches %d\n", tmp1, tmp2);
+                    printf("%d reaches %d\n", query.src, query.dst);
             }else{
                 if(choice==3)
-                    printf("%d does not reach %d\n", tmp1, tmp2);
+                    printf("%d does not reach %d\n", query.src, query.dst);
             }
-        }
-       // sleep(1);
-    }while(readval != EOF);
+    }while(1);
 
     return (int *)1;
 }
@@ -506,4 +519,33 @@ int menu(void){
 
   return choice;
     
+}
+
+//////// QUEUE ENQ & DEQ ///////////
+void enqueue(query_t query){
+    queue[tail] = query;
+    // queue[tail].dst = query.dst;
+    // queue[tail].src=query.src;
+    tail=(tail+1)%SIZE;
+    return;
+}
+void dequeue(query_t *query){
+    *query = queue[head];
+    head=(head+1)%SIZE;
+    return;
+}
+
+void queries_reader(char *filename, graph_t *g, int labelNum){
+    int tmp1, tmp2;
+    query_t query;
+    FILE *fp2= fopen(filename, "r");
+
+    while(fscanf(fp2, "%d %d", &query.src, &query.dst)!=EOF){
+        sem_wait(&empty);
+            enqueue(query);
+        sem_post(&full);
+    }
+
+    fclose(fp2);
+    return;
 }
