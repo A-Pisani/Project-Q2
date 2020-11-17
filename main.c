@@ -7,7 +7,7 @@
 #include <semaphore.h>
 
 #define MAX_LINE 100
-#define NUM_T 2  // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 3 // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
 enum{WHITE, GREY, BLACK};
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
@@ -53,7 +53,7 @@ struct query_s{
     int src;
     int dst;
 };
-#define SIZE 20000
+#define SIZE 100000
 query_t queue[SIZE]; //FIFO standard non ADT without n
 int head=0, tail=0;
 sem_t empty;
@@ -542,14 +542,14 @@ void queries_reader(char *filename, graph_t *g, int labelNum){
     query_t query;
     FILE *fp2= fopen(filename, "r");
 
-    while(fscanf(fp2, "%d %d", &query.src, &query.dst)!=EOF){
+    while(fscanf(fp2, "%d %d", &query.src, &query.dst)!=EOF){ //PRODUCE
         sem_wait(&empty);
             enqueue(query);
         sem_post(&full);
     }
     query.src=-1;
     query.dst=-1;
-    for(int i=0; i<labelNum;i++){
+    for(int i=0; i<NUM_T;i++){
         sem_wait(&empty);
             enqueue(query);
         sem_post(&full);
