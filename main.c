@@ -26,7 +26,6 @@ struct edge_s{
 };
 struct vertex_s{
     int id;
-    //int color;
     int *color;
     int dist;
     int disc_time;
@@ -35,9 +34,6 @@ struct vertex_s{
     vertex_t *pred;
     edge_t *head;
     vertex_t *next;
-    // Labels   MUST BECOME AN ARRAY
-//    int left_label;
-//    int right_label;
     int *left_label;
     int *right_label;
     //if already visited set to 1 (initialized to -1)
@@ -45,7 +41,6 @@ struct vertex_s{
     int tmpColor;
 };
 
-//int post_order_index=1;
 int *post_order_index;
 
 
@@ -56,20 +51,17 @@ static void new_edge( graph_t *g, int i, int j);
 void graph_attribute_init(graph_t *g, int index);
 vertex_t *graph_find(graph_t *g, int id);
 void graph_dispose(graph_t*g);
-// LOAD QUERIES
-//int **queries_load(char *filename, int *size);
+
 void queries_checker(char *filename, graph_t *g, int labelNum);
 void queriesDispose(int **mat, int size);
-//DFS VISIT prototypes
+
 void graph_dfs(graph_t *g, vertex_t *n, int index);
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index);
-//
+
 int Randoms(int lower, int upper, int count);
-// QUERY Reachability check
 int isReachableDFS(vertex_t *v, vertex_t *u, graph_t *g, int d);
 int isContained(vertex_t *v, vertex_t *u, int d);
 int menu(void);
-
 
 int main(int argc, char **argv){
     vertex_t *src;
@@ -133,8 +125,6 @@ int main(int argc, char **argv){
             printf("\n");
         } 
     }
-
-    
 
     if(choice==1)
         printf("Construction time (s): %lf\n", time_spent);
@@ -241,7 +231,7 @@ void graph_attribute_init(graph_t *g, int index) {
     return;
 }
 
-vertex_t *graph_find(graph_t *g, int id) { /*It is often necessary to avoid linear searches(use pointers or efficient symbol tables)*/
+vertex_t *graph_find(graph_t *g, int id) { 
     vertex_t *v;
     v = g->g;
     while(v != NULL) {
@@ -275,9 +265,7 @@ void graph_dispose(graph_t *g) { /*Free list of lists*/
 
 void graph_dfs(graph_t *g, vertex_t *n, int index) {
     int currTime=0;
-    //CHECK IT EFFECTIVELY WORKS.
     n->visited=1;
-    ////////////////////////
     vertex_t *tmp, *tmp2;
    // printf("List of edges:\n");
     currTime = graph_dfs_r (g, n, currTime, index);
@@ -301,7 +289,6 @@ void graph_dfs(graph_t *g, vertex_t *n, int index) {
 }
 
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
-    //vertex_t *tmp;
     edge_t *e;
     vertex_t *t;
     n->color[index] = GREY;
@@ -319,16 +306,6 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     n->endp_time = ++currTime;
     n->right_label[index]= ++post_order_index[index];
     n->left_label[index]=g->nv+1;
-//    if(n->next==NULL)
-//        n->left_label = n->right_label;
-//    else{
-//        for (tmp=n->next; tmp!=NULL; tmp=tmp->next) {
-//            if(tmp->left_label<n->left_label)
-//                n->left_label=tmp->left_label;
-//        }
-//    }
-
-            //currTime = graph_dfs_r(g, t, currTime);
 
     if(n->head==NULL)
         n->left_label[index]=n->right_label[index];
@@ -339,7 +316,6 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
                     n->left_label[index]=t->left_label[index];
         }
     }
-
 
     return currTime;
 }
@@ -370,7 +346,6 @@ int Randoms(int lower, int upper, int count){
     int i, num;
     for (i = 0; i < count; i++) {
          num = (rand() % (upper - lower + 1)) + lower;
-       // printf("Randomly selected node is:      %d \n", num);
     }
     return num;
 }
@@ -388,27 +363,6 @@ int Randoms(int lower, int upper, int count){
  *  end
  *  return false; // u does not reach v
  * */
-// int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
-//     if(!isContained(u, v, d)){
-//         return 0;
-//     }else if(u->id == v->id){
-//         return 1;
-//     }else{
-//         edge_t *e;
-//         vertex_t *t;
-//         //u->disc_time = ++currTime;
-//         e = u->head;
-//         while (e != NULL) {
-//             t = e->dst;
-//                 t->pred = u;
-//                     if(isReachableDFS(t, v, g, d))
-//                         return 1;
-//             e = e->next;
-//         }
-//         return 0;
-//     }
-// }
-
 int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
     if(!isContained(u, v, d)){
         return 0;
@@ -417,7 +371,6 @@ int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
     }else{
         edge_t *e;
         vertex_t *t;
-        //u->disc_time = ++currTime;
         e = u->head;
         while (e != NULL) {
             t = e->dst;
