@@ -123,14 +123,18 @@ int main(int argc, char **argv){
     end = clock();
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
-    printf("\n");
-    for(vertex_t *v=g->g; v!=NULL;v=v->next){
-        printf("node %d :", v->id);
-         for(int i=0; i<labelNum; i++){
-            printf(" index%d [%d, %d] ", i, v->left_label[i], v->right_label[i]);
-         }
-         printf("\n");
+    if(choice==2){
+        printf("\n");
+        for(vertex_t *v=g->g; v!=NULL;v=v->next){
+            printf("node %d :", v->id);
+            for(int i=0; i<labelNum; i++){
+                printf(" index%d [%d, %d] ", i, v->left_label[i], v->right_label[i]);
+            }
+            printf("\n");
+        } 
     }
+
+    
 
     if(choice==1)
         printf("Construction time (s): %lf\n", time_spent);
@@ -217,7 +221,7 @@ static void new_edge( graph_t *g, int i, int j) { /*Add a new edge node into sec
     e = (edge_t*) malloc(sizeof(edge_t));
     e->dst= dst;
     e->next= src->head; src->head = e;
-    //printf("created edge %d -> %d\n", i, j);
+    printf("created edge %d -> %d\n", i, j);
     return;
 }
 
