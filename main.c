@@ -8,21 +8,26 @@
 #include <omp.h>
 
 #define MAX_LINE 100
-#define NUM_T 8    // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 8    
+
 enum{WHITE, GREY, BLACK};
+
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
 typedef struct edge_s edge_t;
+
 /* graph wrapper*/
 struct graph_s{
     vertex_t* g;
     int nv;
 };
+
 struct edge_s{
     int weight;
     vertex_t *dst;
     edge_t *next;
 };
+
 struct vertex_s{
     int id;
     int *color;
@@ -33,12 +38,13 @@ struct vertex_s{
     vertex_t *pred;
     edge_t *head;
     vertex_t *next;
-    int *left_label;   // Labels   MUST BE AN ARRAY
+    int *left_label;   
     int *right_label;
     //if already visited set to 1 (initialized to -1)
     int visited;
     int tmpColor;
 };
+
 typedef struct threadData{
     pthread_t threadID;
     int ID;
@@ -47,39 +53,33 @@ typedef struct threadData{
     graph_t *g;
     vertex_t *n;
 }threadD;
-//int post_order_index=1;
-int *post_order_index; //array
+
+int *post_order_index; 
 int choice;
-//sem_t *sem;
 pthread_mutex_t sem;
-//LOAD GRAPH
+
 static vertex_t *new_node(vertex_t *g, int id, int labelNum);
 graph_t *graph_load(char *filename, int labelNum);
 static void new_edge( graph_t *g, int i, int j);
 void graph_attribute_init(graph_t *g, int index);
 vertex_t *graph_find(graph_t *g, int id);
 void graph_dispose(graph_t*g);
-// LOAD QUERIES
-//int **queries_load(char *filename, int *size);
-//void queries_checker(char *filename, graph_t *g, int labelNum);       //SEQUENTIAL VERSION
-void *queries_checker(void *);                                          //PARALLEL VERSION
+
+void *queries_checker(void *);                                         
 void queriesDispose(int **mat, int size);
-//DFS VISIT prototypes
-//void graph_dfs(graph_t *g, vertex_t *n, int index);                   //SEQUENTIAL VERSION
-void *graph_dfs(void *);                                                //PARALLEL VERSION
+          
+void *graph_dfs(void *);                                              
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index);
-//
+
 int Randoms(int lower, int upper, int count);
-// QUERY Reachability check
 int isReachableDFS(vertex_t *v, vertex_t *u, graph_t *g, int d);
 int isContained(vertex_t *v, vertex_t *u, int d);
 int menu(void);
-vertex_t **graph_find_couple(graph_t *g, int id, int id2);
+
 int main(int argc, char **argv){
     int i=0, lower = 0, count = 1;
     vertex_t *src;
     threadD *td, *td2;
-    void *retval;
     // Use current time as seed for random generator
     srand(time(0));
     if(argc!=4){
@@ -92,8 +92,7 @@ int main(int argc, char **argv){
     int labelNum= atoi(argv[2]);
     printf("************ PARALLEL GRAIL VERSION **************\n");
     choice = menu();
-    //sem = (sem_t *)malloc(sizeof(sem_t));
-    //sem_init(sem, 0, 1);     //0 -> not_shared; 1 -> init_value
+    
     pthread_mutex_init(&sem, NULL); 
     td = (threadD *)malloc(labelNum* sizeof(threadD));
     if(td == NULL){
@@ -120,18 +119,16 @@ int main(int argc, char **argv){
         // Randomized traversal strategy (RandomizedLabeling)
         do{
             i = Randoms(lower, g->nv-1, count); // finds "count" (one) rand number between [0, nv-1]
-            src= graph_find(g, i);              //src is of type vertex_t
+            src= graph_find(g, i);             
         }while(src->visited!=-1);
         // TO AVOID PROBLEMS SET HERE src->visited = 1 AND NOT IN GRAPH_DFS
         src->visited = 1;
-        ///////////////////////////////////////////////////////////////////
         td[j].ID=j;
         td[j].n=src;
         td[j].g=g;
         td[j].labelNum = labelNum;
         graph_attribute_init(g, j);
         pthread_create(&td[j].threadID, NULL, graph_dfs, (void *) &td[j]);
-        //graph_dfs(g, src, j);      // call to sequential function
     }
 
     for(int i=0; i<labelNum; i++){
@@ -151,16 +148,13 @@ int main(int argc, char **argv){
         exit (1);
     }
     FILE *fp2= fopen(argv[3], "r");
-    begin = clock();
     double start2 = omp_get_wtime();
     
     for(int j=0;j<NUM_T;j++){
-        //set-up threads fields
         td2[j].ID=j;
         td2[j].g=g;
         td2[j].fp = fp2;
         td2[j].labelNum = labelNum;
-        //graph_attribute_init(g, j);
         pthread_create(&td2[j].threadID, NULL, queries_checker, (void *) &td2[j]);
     }
 
@@ -170,12 +164,9 @@ int main(int argc, char **argv){
     }
 
     double end2 = omp_get_wtime();
-    end = clock();
-    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     double final2 = end2 - start2;
     if(choice==1)
-      printf("Query time (ms): %lf         %lf\n", time_spent, final2);
-    //queries_checker(argv[3], g, labelNum);    //call to sequential function
+        printf("Query time (ms): %lf\n", final2);
     printf("************ END ************\n");
     graph_dispose(g);
     free(post_order_index);
@@ -262,7 +253,7 @@ void graph_attribute_init(graph_t *g, int index) {
     }
     return;
 }
-vertex_t *graph_find(graph_t *g, int id) { /*It is often necessary to avoid linear searches(use pointers or efficient symbol tables)*/
+vertex_t *graph_find(graph_t *g, int id) { 
     vertex_t *v;
     v = g->g;
     while(v != NULL) {
@@ -293,17 +284,12 @@ void graph_dispose(graph_t *g) { /*Free list of lists*/
     return;
 }
 void *graph_dfs(void *param) {
-    //int n, readval;
     threadD *td ;
     td = (threadD *) param;
     if(choice==2)
         fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
     int currTime=0;
-/*     //CHECK IT EFFECTIVELY WORKS. LEADS TO A SMALL BUG, ADJUST IT.
-    sem_wait(sem);
-        td->n->visited=1;
-    sem_post(sem);
-    //////////////////////// */
+
     vertex_t *tmp, *tmp2;
     // printf("List of edges:\n");
     currTime = graph_dfs_r (td->g, td->n, currTime, td->ID);
@@ -315,7 +301,7 @@ void *graph_dfs(void *param) {
         }
     }
     
-    //PRINT LABELS
+    //Print labels
         if(choice==2){
            printf("List of vertices (and labels):\n"); 
            for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
@@ -344,11 +330,9 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     n->color[index] = BLACK;
     n->endp_time = ++currTime;
     n->right_label[index]= ++post_order_index[index];
-    ////////////////////////////////////////////
-    /////// DOES IT ACTUALLY WORK ???? /////////
-    ////////////////////////////////////////////
     n->left_label[index]=g->nv +1;
-    // if so WE ARE ON A LEAF
+
+    // if so we are on a leaf
     if(n->head==NULL)
         n->left_label[index]=n->right_label[index];
     else{
@@ -363,28 +347,20 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
 void *queries_checker(void *param){
     threadD *td ;
     td = (threadD *) param;
-    //fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
-    // parameters of sequential queries_checker
     graph_t *g= td->g;
     int labelNum = td->labelNum;
     int readval;
-    vertex_t *src, *dst, **couple;
+    vertex_t *src, *dst;
     int tmp1, tmp2;
-    int num=0;
     
     do{
-        //sem_wait(sem);
         pthread_mutex_lock(&sem);
             readval = fscanf(td->fp, "%d %d", &tmp1, &tmp2);
-            //printf("thread %d performing line %d\n", td->ID, num++);
-        //sem_post(sem);
         pthread_mutex_unlock(&sem);
         if(readval != EOF){
             
-           // printf("%d %d\n", couple[0]->id, couple[1]->id);
             src= graph_find(g, tmp1);
-            dst= graph_find(g, tmp2);           //MAYBE THEY CAN BE FOUND IN A SINGLE ROUND.........
-            //graph_attribute_init(g, 0);               // think is useless...
+            dst= graph_find(g, tmp2);           
             if(isReachableDFS(src, dst, g, labelNum)){
                 if(choice==3)
                     printf("%d reaches %d\n", tmp1, tmp2);
@@ -393,10 +369,10 @@ void *queries_checker(void *param){
                     printf("%d does not reach %d\n", tmp1, tmp2);
             }
         }
-       // sleep(1);
     }while(readval != EOF);
     return (int *)1;
 }
+
 /*
  * Function isReachableDFS(u, v, G):
  *  if Lv!⊆ Lu then
@@ -431,6 +407,7 @@ int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
         return 0;
     
 }
+
 int isContained(vertex_t *u, vertex_t *v, int d){
     for(int i=0; i<d; i++){
         if(v->left_label[i] < u->left_label[i] || v->right_label[i] > u->right_label[i])
@@ -438,6 +415,7 @@ int isContained(vertex_t *u, vertex_t *v, int d){
     }
     return 1;
 }
+
 // Generates and returns 'count' random numbers in range [lower, upper].
 int Randoms(int lower, int upper, int count){
     int i, num;
@@ -448,15 +426,16 @@ int Randoms(int lower, int upper, int count){
     }
     return num;
 }
+
 void queriesDispose(int **mat, int size){
     for(int i=0;i<size;i++){
         free(mat[i]);
     }
     free(mat);
 }
+
 int menu(void){
     int choice;
-    char str[5];
     do {
         printf("\n******************  MENU   ************************");
         printf("\nEXECUTION TIME enter    1");
