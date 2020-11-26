@@ -112,7 +112,6 @@ int main(int argc, char **argv){
         exit(1);
     }
     printf("************ RANDOMIZED LABELING ************\n");
-    begin = clock();
     double start = omp_get_wtime();
     
     for(int j=0;j<labelNum;j++){        
@@ -136,11 +135,9 @@ int main(int argc, char **argv){
     }
 
     double end1 = omp_get_wtime();
-    end = clock();
     double final = end1 - start;
-    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     if(choice==1)
-        printf("Construction time (ms): %lf      %lf\n", time_spent, final);
+        printf("Construction time (ms): %lf\n", final);
     printf("************ CHECKING QUERIES ************\n");
     td2 = (threadD *)malloc(NUM_T* sizeof(threadD));
     if(td2 == NULL){
@@ -168,8 +165,12 @@ int main(int argc, char **argv){
     if(choice==1)
         printf("Query time (ms): %lf\n", final2);
     printf("************ END ************\n");
+    fclose(fp2);
+    free(td); free(td2);
     graph_dispose(g);
     free(post_order_index);
+    pthread_mutex_destroy(&sem); 
+
 }
 graph_t *graph_load(char *filename, int labelNum) {
     graph_t *g;
