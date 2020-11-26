@@ -5,8 +5,10 @@
 #include <time.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <omp.h>
+
 #define MAX_LINE 100
-#define NUM_T 2    // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 8    // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
 enum{WHITE, GREY, BLACK};
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
@@ -112,6 +114,8 @@ int main(int argc, char **argv){
     }
     printf("************ RANDOMIZED LABELING ************\n");
     begin = clock();
+    double start = omp_get_wtime();
+    
     for(int j=0;j<labelNum;j++){        
         // Randomized traversal strategy (RandomizedLabeling)
         do{
@@ -134,10 +138,12 @@ int main(int argc, char **argv){
         pthread_join(td[i].threadID, NULL);
     }
 
+    double end1 = omp_get_wtime();
     end = clock();
+    double final = end1 - start;
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     if(choice==1)
-        printf("Construction time (ms): %lf\n", time_spent);
+        printf("Construction time (ms): %lf      %lf\n", time_spent, final);
     printf("************ CHECKING QUERIES ************\n");
     td2 = (threadD *)malloc(NUM_T* sizeof(threadD));
     if(td2 == NULL){
@@ -146,6 +152,8 @@ int main(int argc, char **argv){
     }
     FILE *fp2= fopen(argv[3], "r");
     begin = clock();
+    double start2 = omp_get_wtime();
+    
     for(int j=0;j<NUM_T;j++){
         //set-up threads fields
         td2[j].ID=j;
@@ -161,10 +169,12 @@ int main(int argc, char **argv){
         pthread_join(td2[i].threadID, NULL);
     }
 
+    double end2 = omp_get_wtime();
     end = clock();
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    double final2 = end2 - start2;
     if(choice==1)
-        printf("Query time (ms): %lf\n", time_spent);
+      printf("Query time (ms): %lf         %lf\n", time_spent, final2);
     //queries_checker(argv[3], g, labelNum);    //call to sequential function
     printf("************ END ************\n");
     graph_dispose(g);
