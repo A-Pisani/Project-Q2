@@ -5,9 +5,10 @@
 #include <time.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <omp.h>
 
 #define MAX_LINE 100
-#define NUM_T 3 // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
+#define NUM_T 1 // MODIFY TO SEE WHICH # OF THREADS GIVES BEST PERFORMANCE = 10
 enum{WHITE, GREY, BLACK};
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
@@ -148,7 +149,8 @@ int main(int argc, char **argv){
 
     printf("************ RANDOMIZED LABELING ************\n");
     begin = clock();
-
+	
+    double start = omp_get_wtime();
     for(int j=0;j<labelNum;j++){        
         // Randomized traversal strategy (RandomizedLabeling)
         do{
@@ -172,11 +174,13 @@ int main(int argc, char **argv){
         pthread_join(td[i].threadID, NULL);
     }
     
+    double end22 = omp_get_wtime();
     end = clock();
+    double final = end22 - start;
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
     if(choice==1)
-        printf("Construction time (ms): %lf\n", time_spent);
+        printf("Construction time (ms): %lf	%lf\n", time_spent, final);
     printf("************ CHECKING QUERIES ************\n");
 
     td2 = (threadD *)malloc(NUM_T* sizeof(threadD));
@@ -188,7 +192,7 @@ int main(int argc, char **argv){
    // FILE *fp2= fopen(argv[3], "r");
 
     begin = clock();
-
+    start = omp_get_wtime();
 
     for(int j=0;j<NUM_T;j++){
         //set-up threads fields
@@ -207,10 +211,12 @@ int main(int argc, char **argv){
          pthread_join(td2[i].threadID, NULL);
      }
 
+    end22 = omp_get_wtime();
     end = clock();
+    final = end22 - start;
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     if(choice==1)
-        printf("Query time (s): %lf\n", time_spent);
+        printf("Query time (s): %lf	%lf\n", time_spent, final);
 
 
     printf("************ END ************\n");
