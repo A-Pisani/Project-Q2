@@ -211,7 +211,7 @@ static void new_edge( graph_t *g, int i, int j) { /*Add a new edge node into sec
     e = (edge_t*) malloc(sizeof(edge_t));
     e->dst= dst;
     e->next= src->head; src->head = e;
-    printf("created edge %d -> %d\n", i, j);
+    // printf("created edge %d -> %d\n", i, j);
     return;
 }
 
