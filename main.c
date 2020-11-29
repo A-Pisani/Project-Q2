@@ -198,9 +198,10 @@ int main(int argc, char **argv){
         printf("Query time (s): %lf\n", final);
 
     printf("************ END ************\n");
-
+    free(td); free(td2);
     graph_dispose(g);
     free(post_order_index);
+    pthread_mutex_destroy(&sem); 
 }
 
 graph_t *graph_load(char *filename, int labelNum) {
@@ -407,7 +408,7 @@ void *queries_checker(void *param){
             }
     }while(1);
 
-    return (int *)1;
+    return NULL;
 }
 
 /*
