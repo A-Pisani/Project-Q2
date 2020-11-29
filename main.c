@@ -3,19 +3,16 @@
 #include <stdio.h>
 #include <limits.h>
 #include <time.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <omp.h>
+#include <string.h>
+#include <sys/time.h>
 
 #define MAX_LINE 100
-#define NUM_T 5
-#define SIZE 100000
-
 enum{WHITE, GREY, BLACK};
+int choice;
+
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
 typedef struct edge_s edge_t;
-typedef struct query_s query_t;
 /* graph wrapper*/
 struct graph_s{
     vertex_t* g;
@@ -30,43 +27,24 @@ struct edge_s{
 struct vertex_s{
     int id;
     int *color;
+    int dist;
     int disc_time;
     int endp_time;
+    int scc;
     vertex_t *pred;
     edge_t *head;
     vertex_t *next;
-    //indexes
-    int *left_label;   
+    int *left_label;
     int *right_label;
     //if already visited set to 1 (initialized to -1)
     int visited;
     int tmpColor;
 };
 
-typedef struct threadData{
-    pthread_t threadID;
-    int ID;
-    int labelNum; 
-    FILE *fp;
-    graph_t *g;
-    vertex_t *n;
-}threadD;
-
-struct query_s{
-    int src;
-    int dst;
-};
-
-query_t queue[SIZE]; //FIFO standard non ADT without n
-int head=0, tail=0;
-sem_t empty;
-sem_t full;
+int *post_order_index;
 
 
-int *post_order_index; //array
-int choice;
-pthread_mutex_t sem;
-
+//LOAD GRAPH
 static vertex_t *new_node(vertex_t *g, int id, int labelNum);
 graph_t *graph_load(char *filename, int labelNum);
 static void new_edge( graph_t *g, int i, int j);
@@ -74,28 +52,20 @@ void graph_attribute_init(graph_t *g, int index);
 vertex_t *graph_find(graph_t *g, int id);
 void graph_dispose(graph_t*g);
 
-void *graph_dfs(void *);                                              
-int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index);
-
-void queries_reader(char *filename, graph_t *g, int labelNum);   
-void *queries_checker(void *);                                       
+void queries_checker(char *filename, graph_t *g, int labelNum);
 void queriesDispose(int **mat, int size);
 
+void graph_dfs(graph_t *g, vertex_t *n, int index);
+int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index);
 
 int Randoms(int lower, int upper, int count);
 int isReachableDFS(vertex_t *v, vertex_t *u, graph_t *g, int d);
 int isContained(vertex_t *v, vertex_t *u, int d);
-
 int menu(void);
 
-void enqueue(query_t query);
-void dequeue(query_t *query);
-
-
 int main(int argc, char **argv){
-    int i=0, lower = 0, count = 1;
     vertex_t *src;
-    threadD *td, *td2;
+    int i=0, lower = 0, count = 1;
 
     // Use current time as seed for random generator
     srand(time(0));
@@ -109,18 +79,9 @@ int main(int argc, char **argv){
     }
     int labelNum= atoi(argv[2]);
 
-    printf("************ PARALLEL GRAIL VERSION **************\n");
+    printf("************ SEQUENTIAL GRAIL VERSION **************\n");
 
     choice = menu();
-
-    pthread_mutex_init(&sem, NULL); 
-    sem_init(&full, 0, 0);     //0 -> not_shared; 0 -> init_value
-    sem_init(&empty, 0, SIZE);     //0 -> not_shared; SIZE -> init_value
-    td = (threadD *)malloc(labelNum* sizeof(threadD));
-    if(td == NULL){
-        fprintf (stderr, "Error allocating threads\n" );
-        exit (1);
-    }
 
     printf("************ LOADING GRAPH **************\n");
     clock_t begin = clock();
@@ -131,7 +92,7 @@ int main(int argc, char **argv){
     double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
     if(choice==1)
-        printf("Graph Construction time (ms): %lf\n", time_spent);
+        printf("Graph Construction time (s): %lf\n", time_spent);
 
     post_order_index=(int*)calloc(labelNum, sizeof(int));
     if(post_order_index==NULL){
@@ -140,70 +101,48 @@ int main(int argc, char **argv){
     }
 
     printf("************ RANDOMIZED LABELING ************\n");
-    double start = omp_get_wtime();
-    for(int j=0;j<labelNum;j++){        
-        // Randomized traversal strategy (RandomizedLabeling)
+    begin = clock();
+
+    for(int j=0;j<labelNum;j++){
         do{
-            i = Randoms(lower, g->nv-1, count); // finds "count" (one) rand number between [0, nv-1]
-            src= graph_find(g, i);              //src is of type vertex_t
+            i = Randoms(lower, g->nv-1, count);
+            src= graph_find(g, i);
         }while(src->visited!=-1);
-
-        // TO AVOID PROBLEMS SET HERE src->visited = 1 AND NOT IN GRAPH_DFS
-        src->visited = 1;
-        td[j].ID=j;
-        td[j].n=src;
-        td[j].g=g;
-        td[j].labelNum = labelNum;
         graph_attribute_init(g, j);
-        pthread_create(&td[j].threadID, NULL, graph_dfs, (void *) &td[j]);
-        //graph_dfs(g, src, j);      // call to sequential function
+        graph_dfs(g, src, j);
     }
 
-    for(int i=0; i<labelNum; i++){
-        pthread_join(td[i].threadID, NULL);
+    end = clock();
+    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+    if(choice==2){
+        printf("\n");
+        for(vertex_t *v=g->g; v!=NULL;v=v->next){
+            printf("node %d :", v->id);
+            for(int i=0; i<labelNum; i++){
+                printf(" index%d [%d, %d] ", i, v->left_label[i], v->right_label[i]);
+            }
+            printf("\n");
+        } 
     }
-    
-    double end22 = omp_get_wtime();
-    double final = end22 - start;
 
     if(choice==1)
-        printf("Construction time (ms): %lf\n", final);
+        printf("Construction time (s): %lf\n", time_spent);
     printf("************ CHECKING QUERIES ************\n");
 
-    td2 = (threadD *)malloc(NUM_T* sizeof(threadD));
-    if(td2 == NULL){
-        fprintf (stderr, "Error allocating second round of threads \n" );
-        exit (1);
-    }
+    begin = clock();
 
-    start = omp_get_wtime();
+    queries_checker(argv[3], g, labelNum);
 
-    for(int j=0;j<NUM_T;j++){
-        //set-up threads fields
-        td2[j].ID=j;
-        td2[j].g=g;
-        td2[j].labelNum = labelNum;
-        pthread_create(&td2[j].threadID, NULL, queries_checker, (void *) &td2[j]);
-    }
-
-    queries_reader(argv[3], g, labelNum); 
-
-     for(int i=0; i<NUM_T; i++){
-         pthread_join(td2[i].threadID, NULL);
-     }
-
-    end22 = omp_get_wtime();
-    final = end22 - start;
+    end = clock();
+    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     if(choice==1)
-        printf("Query time (s): %lf\n", final);
+        printf("Query time (s): %lf\n", time_spent);
 
     printf("************ END ************\n");
-    free(td); free(td2);
+
     graph_dispose(g);
     free(post_order_index);
-    pthread_mutex_destroy(&sem); 
-    sem_destroy(&empty);
-    sem_destroy(&full);
 }
 
 graph_t *graph_load(char *filename, int labelNum) {
@@ -213,9 +152,9 @@ graph_t *graph_load(char *filename, int labelNum) {
     char character[100];
     g = (graph_t*) calloc(1, sizeof(graph_t));
     fp = fopen(filename, "r");
-    if(fp == NULL){
-        printf("error opening %s\n", filename);
-        exit(0);
+    if(fp==NULL){
+        fprintf(stderr, "Error reading from file %s\n", filename);
+        exit(1);
     }
     fscanf(fp, "%d", &g->nv);
     if(choice == 2)
@@ -228,6 +167,7 @@ graph_t *graph_load(char *filename, int labelNum) {
     /* load edges*/
     for (i=g->nv-1; i>=0; i--) {
         fscanf(fp, "%d: ", &k);
+        //printf("%d\n", i);
        do{
            fscanf(fp, "%s ", character);
            if(character[0]!='#'){
@@ -244,7 +184,8 @@ static vertex_t *new_node(vertex_t *g, int id, int labelNum) { /*Add a new verte
     vertex_t*v;
     v = (vertex_t*)malloc(sizeof(vertex_t));
     v->id = id;
-    v->disc_time = v->endp_time = -1;
+    v->dist= INT_MAX;
+    v->scc = v->disc_time = v->endp_time = -1;
     v->pred= NULL; v->head = NULL;
     v->next= g;
     v->tmpColor=WHITE;
@@ -270,7 +211,7 @@ static void new_edge( graph_t *g, int i, int j) { /*Add a new edge node into sec
     e = (edge_t*) malloc(sizeof(edge_t));
     e->dst= dst;
     e->next= src->head; src->head = e;
-    //printf("created edge %d -> %d\n", i, j);
+    // printf("created edge %d -> %d\n", i, j);
     return;
 }
 
@@ -280,8 +221,10 @@ void graph_attribute_init(graph_t *g, int index) {
     while(v!=NULL) {
         v->color[index] = WHITE;
         v->tmpColor=WHITE;
+        v->dist= INT_MAX;
         v->disc_time= -1;
         v->endp_time= -1;
+        v->scc= -1;
         v->pred= NULL;
         v = v->next;
     }
@@ -299,7 +242,6 @@ vertex_t *graph_find(graph_t *g, int id) {
     }
     return NULL;
 }
-
 
 void graph_dispose(graph_t *g) { /*Free list of lists*/
     vertex_t *v, *curr; edge_t *e;
@@ -321,33 +263,29 @@ void graph_dispose(graph_t *g) { /*Free list of lists*/
     return;
 }
 
-void *graph_dfs(void *param) {
-    threadD *td ;
-    td = (threadD *) param;
-    if(choice==2)
-        fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
+void graph_dfs(graph_t *g, vertex_t *n, int index) {
     int currTime=0;
-
+    n->visited=1;
     vertex_t *tmp, *tmp2;
-    // printf("List of edges:\n");
-    currTime = graph_dfs_r (td->g, td->n, currTime, td->ID);
+   // printf("List of edges:\n");
+    currTime = graph_dfs_r (g, n, currTime, index);
     // PERFORMS A DFS ON ISLANDS
-    for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
-        if(tmp->color[td->ID] == WHITE) {
-            currTime= graph_dfs_r(td->g, tmp, currTime, td->ID);
+    for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
+        if(tmp->color[index] == WHITE) {
+           // printf("Root of the DFS %2d\n", tmp->id);
+            currTime= graph_dfs_r(g, tmp, currTime, index);
         }
     }
-    
-    //print labels/indexes
+    //PRINT LABELS
         if(choice==2){
            printf("List of vertices (and labels):\n"); 
-           for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
+           for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
                 tmp2 = tmp->pred;
                 printf("%2d: %2d/%2d (%d)  labelL=%d       labelR=%d\n", tmp->id, tmp->disc_time, tmp->endp_time,
-                        (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[td->ID], tmp->right_label[td->ID]);
+                        (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
            }  
         }
-    pthread_exit((void *) 1) ;
+
 }
 
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
@@ -367,9 +305,8 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     n->color[index] = BLACK;
     n->endp_time = ++currTime;
     n->right_label[index]= ++post_order_index[index];
-    n->left_label[index]=g->nv +1;
+    n->left_label[index]=g->nv+1;
 
-    // if so we are on a leaf
     if(n->head==NULL)
         n->left_label[index]=n->right_label[index];
     else{
@@ -379,38 +316,38 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
                     n->left_label[index]=t->left_label[index];
         }
     }
+
     return currTime;
 }
 
-void *queries_checker(void *param){
-    threadD *td ;
-    td = (threadD *) param;
-    graph_t *g= td->g;
-    int labelNum = td->labelNum;
+void queries_checker(char *filename, graph_t *g, int labelNum){
     vertex_t *src, *dst;
-    query_t query;
-    
-    do{
-        sem_wait(&full);
-        pthread_mutex_lock(&sem);
-            dequeue(&query);
-        pthread_mutex_unlock(&sem);
-        sem_post(&empty);
-        // CONSUME
-            if(query.src==-1)
-                return (int *)1;
-            src= graph_find(g, query.src);
-            dst= graph_find(g, query.dst);
-            if(isReachableDFS(src, dst, g, labelNum)){
+    int tmp1, tmp2;
+    FILE *fp2= fopen(filename, "r");
+
+    while(fscanf(fp2, "%d %d", &tmp1, &tmp2)!=EOF){
+        src= graph_find(g, tmp1);
+        dst= graph_find(g, tmp2);
+
+        if(isReachableDFS(src, dst, g, labelNum)){
                 if(choice==3)
-                    printf("%d reaches %d\n", query.src, query.dst);
+                    printf("%d reaches %d\n", tmp1, tmp2);
             }else{
                 if(choice==3)
-                    printf("%d does not reach %d\n", query.src, query.dst);
+                    printf("%d does not reach %d\n", tmp1, tmp2);
             }
-    }while(1);
+    }
+    fclose(fp2);
+    return;
+}
 
-    return NULL;
+// Generates and returns 'count' random numbers in range [lower, upper].
+int Randoms(int lower, int upper, int count){
+    int i, num;
+    for (i = 0; i < count; i++) {
+         num = (rand() % (upper - lower + 1)) + lower;
+    }
+    return num;
 }
 
 /*
@@ -427,17 +364,17 @@ void *queries_checker(void *param){
  *  return false; // u does not reach v
  * */
 int isReachableDFS(vertex_t *u, vertex_t *v, graph_t *g, int d){
-    if(u->id == v->id){
-        return 1;
-    }else if(!isContained(u, v, d)){
+    if(!isContained(u, v, d)){
         return 0;
+    }else if(u->id == v->id){
+        return 1;
     }else{
         edge_t *e;
         vertex_t *t;
         e = u->head;
         while (e != NULL) {
             t = e->dst;
-                t->pred = u;
+                if(isContained(t,v,d))
                     if(isReachableDFS(t, v, g, d))
                         return 1;
             e = e->next;
@@ -452,24 +389,6 @@ int isContained(vertex_t *u, vertex_t *v, int d){
             return 0;
     }
     return 1;
-}
-
-// Generates and returns 'count' random numbers in range [lower, upper].
-int Randoms(int lower, int upper, int count){
-    int i, num;
-    for (i = 0; i < count; i++) {
-         num = (rand() % (upper - lower + 1)) + lower;
-         if(choice==2)
-            printf("Randomly selected node is:      %d \n", num);
-    }
-    return num;
-}
-
-void queriesDispose(int **mat, int size){
-    for(int i=0;i<size;i++){
-        free(mat[i]);
-    }
-    free(mat);
 }
 
 int menu(void){
@@ -492,37 +411,4 @@ int menu(void){
 
   return choice;
     
-}
-
-
-void enqueue(query_t query){
-    queue[tail] = query;
-    tail=(tail+1)%SIZE;
-    return;
-}
-void dequeue(query_t *query){
-    *query = queue[head];
-    head=(head+1)%SIZE;
-    return;
-}
-
-void queries_reader(char *filename, graph_t *g, int labelNum){
-    query_t query;
-    FILE *fp2= fopen(filename, "r");
-
-    while(fscanf(fp2, "%d %d", &query.src, &query.dst)!=EOF){ //PRODUCE
-        sem_wait(&empty);
-            enqueue(query);
-        sem_post(&full);
-    }
-    query.src=-1;
-    query.dst=-1;
-    for(int i=0; i<NUM_T;i++){
-        sem_wait(&empty);
-            enqueue(query);
-        sem_post(&full);
-    }
-
-    fclose(fp2);
-    return;
 }

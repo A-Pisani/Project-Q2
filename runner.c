@@ -22,4 +22,12 @@ int main(int argc, char **argv){
     sprintf(str, "./main %s %s %s", argv[1], argv[2], argv[3]);
   
     system(str); 
+
+    sprintf(str, "./main2 %s %s %s", argv[1], argv[2], argv[3]);
+  
+    system(str); 
+
+    sprintf(str, "./main3 %s %s %s", argv[1], argv[2], argv[3]);
+  
+    system(str); 
 }
