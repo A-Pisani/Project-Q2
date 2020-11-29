@@ -202,6 +202,8 @@ int main(int argc, char **argv){
     graph_dispose(g);
     free(post_order_index);
     pthread_mutex_destroy(&sem); 
+    sem_destroy(&empty);
+    sem_destroy(&full);
 }
 
 graph_t *graph_load(char *filename, int labelNum) {
