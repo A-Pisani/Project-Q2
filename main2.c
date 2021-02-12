@@ -90,7 +90,7 @@ int main(int argc, char **argv){
         exit (1);
     }
     int labelNum= atoi(argv[2]);
-    printf("************ PARALLEL GRAIL VERSION **************\n");
+    printf("************ PARALLELv1 GRAIL VERSION **************\n");
     choice = menu();
     
     pthread_mutex_init(&sem, NULL); 
@@ -99,7 +99,7 @@ int main(int argc, char **argv){
         fprintf (stderr, "Error allocating threads\n" );
         exit (1);
     }
-    printf("************ LOADING GRAPH **************\n");
+    printf("****************** LOADING GRAPH *******************\n");
     clock_t begin = clock();
     graph_t *g = graph_load(argv[1], labelNum);
     clock_t end = clock();
@@ -111,7 +111,7 @@ int main(int argc, char **argv){
         fprintf(stderr, "Error in array of indeces allocation\n");
         exit(1);
     }
-    printf("************ RANDOMIZED LABELING ************\n");
+    printf("**************** RANDOMIZED LABELING ***************\n");
     double start = omp_get_wtime();
     
     for(int j=0;j<labelNum;j++){        
@@ -138,7 +138,7 @@ int main(int argc, char **argv){
     double final = end1 - start;
     if(choice==1)
         printf("Construction time (ms): %lf\n", final);
-    printf("************ CHECKING QUERIES ************\n");
+    printf("***************** CHECKING QUERIES *****************\n");
     td2 = (threadD *)malloc(NUM_T* sizeof(threadD));
     if(td2 == NULL){
         fprintf (stderr, "Error allocating second round of threads \n" );
@@ -164,7 +164,7 @@ int main(int argc, char **argv){
     double final2 = end2 - start2;
     if(choice==1)
         printf("Query time (ms): %lf\n", final2);
-    printf("************ END ************\n");
+    printf("************************* END **********************\n");
     fclose(fp2);
     free(td); free(td2);
     graph_dispose(g);
@@ -438,7 +438,7 @@ void queriesDispose(int **mat, int size){
 int menu(void){
     int choice;
     do {
-        printf("\n******************  MENU   ************************");
+        printf("\n******************  MENU   *************************");
         printf("\nEXECUTION TIME enter    1");
         printf("\nDEBUGGING INFORMATION enter     2");
         printf("\nQUERY RESULTS enter   3");
@@ -448,7 +448,7 @@ int menu(void){
         if(choice != 1 && choice != 2 && choice != 3){
             printf("ERROR: please enter a valid alternative\n");
         }
-        printf("\n***************************************************\n");
+        printf("\n****************************************************\n");
     }while(choice != 1 && choice != 2 && choice != 3);
   return choice;
     

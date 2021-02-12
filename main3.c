@@ -8,7 +8,7 @@
 #include <omp.h>
 
 #define MAX_LINE 100
-#define NUM_T 5
+#define NUM_T 8
 #define SIZE 100000
 
 enum{WHITE, GREY, BLACK};
@@ -109,7 +109,7 @@ int main(int argc, char **argv){
     }
     int labelNum= atoi(argv[2]);
 
-    printf("************ PARALLEL GRAIL VERSION **************\n");
+    printf("************ PARALLELv2 GRAIL VERSION **************\n");
 
     choice = menu();
 
@@ -122,7 +122,7 @@ int main(int argc, char **argv){
         exit (1);
     }
 
-    printf("************ LOADING GRAPH **************\n");
+    printf("****************** LOADING GRAPH *******************\n");
     clock_t begin = clock();
 
     graph_t *g = graph_load(argv[1], labelNum);
@@ -139,7 +139,7 @@ int main(int argc, char **argv){
         exit(1);
     }
 
-    printf("************ RANDOMIZED LABELING ************\n");
+    printf("**************** RANDOMIZED LABELING ***************\n");
     double start = omp_get_wtime();
     for(int j=0;j<labelNum;j++){        
         // Randomized traversal strategy (RandomizedLabeling)
@@ -168,7 +168,7 @@ int main(int argc, char **argv){
 
     if(choice==1)
         printf("Construction time (ms): %lf\n", final);
-    printf("************ CHECKING QUERIES ************\n");
+    printf("***************** CHECKING QUERIES *****************\n");
 
     td2 = (threadD *)malloc(NUM_T* sizeof(threadD));
     if(td2 == NULL){
@@ -197,7 +197,7 @@ int main(int argc, char **argv){
     if(choice==1)
         printf("Query time (s): %lf\n", final);
 
-    printf("************ END ************\n");
+    printf("************************* END **********************\n");
     free(td); free(td2);
     graph_dispose(g);
     free(post_order_index);
@@ -476,7 +476,7 @@ int menu(void){
     int choice;
 
     do {
-        printf("\n******************  MENU   ************************");
+        printf("\n******************  MENU   *************************");
         printf("\nEXECUTION TIME enter    1");
         printf("\nDEBUGGING INFORMATION enter     2");
         printf("\nQUERY RESULTS enter   3");
@@ -487,7 +487,7 @@ int menu(void){
             printf("ERROR: please enter a valid alternative\n");
         }
 
-        printf("\n***************************************************\n");
+        printf("\n****************************************************\n");
     }while(choice != 1 && choice != 2 && choice != 3);
 
   return choice;
