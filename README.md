@@ -1,6 +1,15 @@
 # Project 2: Reachability Queries in Directed Graphs 
 Project for the "System and Device Programming" course @ Politecnico di Torino a.y. 2019/2020
 
+## Running the Code  
+To run the code execute the Makefile with `make`. Then execute  `./runner`. This will prompt the user to choose among **four** modes: 
+1) Sequential version; 
+2) Parallel version v1; 
+3) Parallel version v2; 
+4) All of the previous together in sequence. 
+
+The code of the first three modes can be found in `main.c`, `main2.c` and `main3.c` respectively.
+
 ## Project’s summary 
 Given a graph, finding the mutual reachability of two vertices is an important task. To be efficient, many methods use labeling approaches, i.e., they add extra-information to each vertex to help solving subsequent reachability queries. This project requires a parallel implementation of a very fast and efficient algorithm, presented a few years ago by a group of researchers, and called GRAIL.  
 

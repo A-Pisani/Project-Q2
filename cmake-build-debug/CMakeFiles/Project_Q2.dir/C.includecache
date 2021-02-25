@@ -1,0 +1,18 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+C:/Users/Alessandro-Pisani/Desktop/Project-Q2/main.c
+stdint.h
+-
+stdlib.h
+-
+stdio.h
+-
+limits.h
+-
+
