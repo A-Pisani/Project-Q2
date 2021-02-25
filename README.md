@@ -1,4 +1,4 @@
-# Project 2: Reachability Queries in Directed Graphs 
+# Reachability Queries in Directed Graphs 
 Project for the "System and Device Programming" course @ Politecnico di Torino a.y. 2019/2020
 
 ## Running the Code  
