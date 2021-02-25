@@ -4,6 +4,5 @@ target:
 	gcc -Wall -g -o main3 main3.c -lm -lpthread -lgomp 
 
 	gcc -Wall -g -o runner runner.c -lm -lpthread
-	
 
 

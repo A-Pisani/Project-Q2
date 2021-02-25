@@ -6,13 +6,16 @@
 #include <string.h>
 #include <sys/time.h>
 
+
 #define MAX_LINE 100
+#define NUM_T 8    
+
 enum{WHITE, GREY, BLACK};
-int choice;
 
 typedef struct graph_s graph_t;
 typedef struct vertex_s vertex_t;
 typedef struct edge_s edge_t;
+
 /* graph wrapper*/
 struct graph_s{
     vertex_t* g;
@@ -24,6 +27,7 @@ struct edge_s{
     vertex_t *dst;
     edge_t *next;
 };
+
 struct vertex_s{
     int id;
     int *color;
@@ -41,10 +45,10 @@ struct vertex_s{
     int tmpColor;
 };
 
-int *post_order_index;
+int *post_order_index; 
+int choice;
+pthread_mutex_t sem;
 
-
-//LOAD GRAPH
 static vertex_t *new_node(vertex_t *g, int id, int labelNum);
 graph_t *graph_load(char *filename, int labelNum);
 static void new_edge( graph_t *g, int i, int j);
@@ -56,6 +60,7 @@ void queries_checker(char *filename, graph_t *g, int labelNum);
 void queriesDispose(int **mat, int size);
 
 void graph_dfs(graph_t *g, vertex_t *n, int index);
+
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index);
 
 int Randoms(int lower, int upper, int count);
@@ -99,7 +104,7 @@ int main(int argc, char **argv){
         fprintf(stderr, "Error in array of indeces allocation\n");
         exit(1);
     }
-
+  
     printf("**************** RANDOMIZED LABELING ***************\n");
     begin = clock();
 
@@ -107,7 +112,14 @@ int main(int argc, char **argv){
         do{
             i = Randoms(lower, g->nv-1, count);
             src= graph_find(g, i);
+
         }while(src->visited!=-1);
+        // TO AVOID PROBLEMS SET HERE src->visited = 1 AND NOT IN GRAPH_DFS
+        src->visited = 1;
+        td[j].ID=j;
+        td[j].n=src;
+        td[j].g=g;
+        td[j].labelNum = labelNum;
         graph_attribute_init(g, j);
         graph_dfs(g, src, j);
     }
@@ -144,7 +156,6 @@ int main(int argc, char **argv){
     graph_dispose(g);
     free(post_order_index);
 }
-
 graph_t *graph_load(char *filename, int labelNum) {
     graph_t *g;
     int i, j, k;
@@ -163,7 +174,6 @@ graph_t *graph_load(char *filename, int labelNum) {
     for (i=g->nv-1; i>=0; i--) {        /*Creates main list of vertices*/
         g->g = new_node(g->g, i, labelNum);
     }
-
     /* load edges*/
     for (i=g->nv-1; i>=0; i--) {
         fscanf(fp, "%d: ", &k);
@@ -179,13 +189,13 @@ graph_t *graph_load(char *filename, int labelNum) {
     fclose(fp);
     return g;
 }
-
 static vertex_t *new_node(vertex_t *g, int id, int labelNum) { /*Add a new vertex node into main list*/
     vertex_t*v;
     v = (vertex_t*)malloc(sizeof(vertex_t));
     v->id = id;
     v->dist= INT_MAX;
-    v->scc = v->disc_time = v->endp_time = -1;
+    
+    v->disc_time = v->endp_time = -1;
     v->pred= NULL; v->head = NULL;
     v->next= g;
     v->tmpColor=WHITE;
@@ -202,7 +212,6 @@ static vertex_t *new_node(vertex_t *g, int id, int labelNum) { /*Add a new verte
     }
     return v;
 }
-
 static void new_edge( graph_t *g, int i, int j) { /*Add a new edge node into secondary list*/
     vertex_t *src, *dst;
     edge_t *e;
@@ -214,7 +223,6 @@ static void new_edge( graph_t *g, int i, int j) { /*Add a new edge node into sec
     // printf("created edge %d -> %d\n", i, j);
     return;
 }
-
 void graph_attribute_init(graph_t *g, int index) {
     vertex_t *v;
     v = g->g;
@@ -242,7 +250,6 @@ vertex_t *graph_find(graph_t *g, int id) {
     }
     return NULL;
 }
-
 void graph_dispose(graph_t *g) { /*Free list of lists*/
     vertex_t *v, *curr; edge_t *e;
     v = g->g;
@@ -262,18 +269,22 @@ void graph_dispose(graph_t *g) { /*Free list of lists*/
     free(g);
     return;
 }
-
-void graph_dfs(graph_t *g, vertex_t *n, int index) {
+void *graph_dfs(void *param) {
+    threadD *td ;
+    td = (threadD *) param;
+    if(choice==2)
+        fprintf(stdout, "thread %d working on node %d\n", td->ID, td->n->id);
     int currTime=0;
     n->visited=1;
+
     vertex_t *tmp, *tmp2;
-   // printf("List of edges:\n");
-    currTime = graph_dfs_r (g, n, currTime, index);
+    // printf("List of edges:\n");
+    currTime = graph_dfs_r (td->g, td->n, currTime, td->ID);
     // PERFORMS A DFS ON ISLANDS
-    for (tmp=g->g; tmp!=NULL; tmp=tmp->next) {
-        if(tmp->color[index] == WHITE) {
-           // printf("Root of the DFS %2d\n", tmp->id);
-            currTime= graph_dfs_r(g, tmp, currTime, index);
+    for (tmp=td->g->g; tmp!=NULL; tmp=tmp->next) {
+        if(tmp->color[td->ID] == WHITE) {
+            // printf("Root of the DFS %2d\n", tmp->id);
+            currTime= graph_dfs_r(td->g, tmp, currTime, td->ID);
         }
     }
     //PRINT LABELS
@@ -285,9 +296,7 @@ void graph_dfs(graph_t *g, vertex_t *n, int index) {
                         (tmp2!=NULL) ? tmp->pred->id : -1, tmp->left_label[index], tmp->right_label[index]);
            }  
         }
-
 }
-
 int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     edge_t *e;
     vertex_t *t;
@@ -307,6 +316,7 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
     n->right_label[index]= ++post_order_index[index];
     n->left_label[index]=g->nv+1;
 
+    // if so we are on a leaf
     if(n->head==NULL)
         n->left_label[index]=n->right_label[index];
     else{
@@ -316,7 +326,6 @@ int graph_dfs_r(graph_t *g, vertex_t *n, int currTime, int index) {
                     n->left_label[index]=t->left_label[index];
         }
     }
-
     return currTime;
 }
 
