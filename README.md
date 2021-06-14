@@ -12,6 +12,8 @@ The code of the first three modes can be found in `main.c`, `main2.c` and `main3
 
 ## Project’s summary 
 Given a graph, finding the mutual reachability of two vertices is an important task. To be efficient, many methods use labeling approaches, i.e., they add extra-information to each vertex to help solving subsequent reachability queries. This project requires a parallel implementation of a very fast and efficient algorithm, presented a few years ago by a group of researchers, and called GRAIL.  
+For a complete report of the Project follow the link [a link](https://github.com/A-Pisani/Reachability-Queries-in-Directed-Graphs/blob/master/Grail-Report.pdf).
+
 
 ## Problem Definition 
 Let G = (V, E) be a directed graph where V represents the set of vertices and E the set of directed  edges. Given two vertices u∈V and v∈V, we say that v is reachable from u (i.e., u→v) if and only if there exist a path from u to v. When this condition is not true, we write u!→v.  
