@@ -12,7 +12,7 @@ The code of the first three modes can be found in `main.c`, `main2.c` and `main3
 
 ## Project’s summary 
 Given a graph, finding the mutual reachability of two vertices is an important task. To be efficient, many methods use labeling approaches, i.e., they add extra-information to each vertex to help solving subsequent reachability queries. This project requires a parallel implementation of a very fast and efficient algorithm, presented a few years ago by a group of researchers, and called GRAIL.  
-For a complete report of the Project follow the link [a link](https://github.com/A-Pisani/Reachability-Queries-in-Directed-Graphs/blob/master/Grail-Report.pdf).
+[Here](https://github.com/A-Pisani/Reachability-Queries-in-Directed-Graphs/blob/master/Grail-Report.pdf) there is a complete report of the Project. 
 
 
 ## Problem Definition 
