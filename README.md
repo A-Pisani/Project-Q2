@@ -2,7 +2,13 @@
 Project for the "System and Device Programming" course @ Politecnico di Torino a.y. 2019/2020
 
 ## Running the Code  
-To run the code execute the Makefile with `make`. Then execute  `./runner`. This will prompt the user to choose among **four** modes: 
+To run the code execute the Makefile with `make`. Then execute  `./runner`.  
+
+```
+make
+./runner
+```
+This will prompt the user to choose among **four** modes:
 1) Sequential version; 
 2) Parallel version v1; 
 3) Parallel version v2; 
