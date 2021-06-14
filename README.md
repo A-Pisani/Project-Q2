@@ -1,5 +1,5 @@
 # Reachability Queries in Directed Graphs 
-Project for the ["System and Device Programming"] (https://didattica.polito.it/pls/portal30/gap.pkg_guide.viewGap?p_cod_ins=01NYHOV&p_a_acc=2020&p_header=S&p_lang=EN) - 01NYHOV course @ Politecnico di Torino a.y. 2019/2020.
+Project for the ["System and Device Programming"](https://didattica.polito.it/pls/portal30/gap.pkg_guide.viewGap?p_cod_ins=01NYHOV&p_a_acc=2020&p_header=S&p_lang=EN) - 01NYHOV course @ Politecnico di Torino a.y. 2019/2020.
 
 ## Running the Code  
 To run the code execute the Makefile with `make`. Then execute  `./runner`.  
